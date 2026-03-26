@@ -4,9 +4,9 @@ package ai.koog.agents.core.agent.entity
 
 import ai.koog.agents.core.agent.context.AIAgentContext
 import ai.koog.agents.core.agent.context.AIAgentGraphContextBase
-import ai.koog.agents.core.agent.context.AgentContextData
-import ai.koog.agents.core.agent.context.getAgentContextData
-import ai.koog.agents.core.agent.context.removeAgentContextData
+import ai.koog.agents.core.agent.context.GraphAgentContextData
+import ai.koog.agents.core.agent.context.getGraphAgentContextData
+import ai.koog.agents.core.agent.context.removeGraphAgentContextData
 import ai.koog.agents.core.agent.execution.DEFAULT_AGENT_PATH_SEPARATOR
 import ai.koog.agents.core.annotation.InternalAgentsApi
 import ai.koog.serialization.JSONElement
@@ -76,7 +76,7 @@ public open class AIAgentGraphStrategyBase<TInput, TOutput>(
 
         var result: TOutput? = super.execute(context = context, input = input)
 
-        while (result == null && context.getAgentContextData() != null) {
+        while (result == null && context.getGraphAgentContextData() != null) {
             restoreStateIfNeeded(context)
             result = super.execute(context = context, input = input)
         }
@@ -88,21 +88,21 @@ public open class AIAgentGraphStrategyBase<TInput, TOutput>(
     private suspend fun restoreStateIfNeeded(
         agentContext: AIAgentGraphContextBase
     ) {
-        val additionalContextData: AgentContextData = agentContext.getAgentContextData() ?: return
+        val additionalContextData: GraphAgentContextData = agentContext.getGraphAgentContextData() ?: return
 
         restoreDefault(agentContext, additionalContextData)
-        agentContext.removeAgentContextData()
+        agentContext.removeGraphAgentContextData()
     }
 
     @OptIn(InternalAgentsApi::class)
-    private suspend fun restoreMessageOnly(agentContext: AIAgentContext, data: AgentContextData) {
+    private suspend fun restoreMessageOnly(agentContext: AIAgentContext, data: GraphAgentContextData) {
         agentContext.llm.withPrompt {
             this.withMessages { (data.messageHistory) }
         }
     }
 
     @OptIn(InternalAgentsApi::class)
-    private suspend fun restoreDefault(agentContext: AIAgentGraphContextBase, data: AgentContextData) {
+    private suspend fun restoreDefault(agentContext: AIAgentGraphContextBase, data: GraphAgentContextData) {
         val nodePath = data.nodePath
 
         // Perform additional cleanup (ex: rollback tools):

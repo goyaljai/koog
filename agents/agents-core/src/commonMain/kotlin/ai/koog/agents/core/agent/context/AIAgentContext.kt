@@ -240,3 +240,103 @@ public inline fun <T> AIAgentContext.with(partName: String, block: (executionInf
     val executionInfo = AgentExecutionInfo(parent = this.executionInfo, partName = partName)
     return with(executionInfo = executionInfo, block = block)
 }
+
+/**
+ * A storage key used for associating and retrieving `AgentContextData` within the AI agent's storage system.
+ *
+ * This key is intended for internal use within the AI agents' infrastructure to securely store and access
+ * data related to an agent's context. The associated data includes details such as message history, node identifiers,
+ * and the last input processed by the agent, allowing seamless tracking and management of an agent's state.
+ *
+ * The storage key is marked with the `@InternalAgentsApi` annotation, indicating that it is part of the internal
+ * mechanism and not meant for public or general-purpose development use. It may be subject to changes or removal
+ * without notice.
+ */
+@OptIn(InternalAgentsApi::class)
+public val graphAgentContextDataAdditionalKey: AIAgentStorageKey<GraphAgentContextData> =
+    AIAgentStorageKey("graph-agent-context-data-key")
+
+/**
+ * A storage key used for associating and retrieving `AgentContextData` within the AI agent's storage system.
+ *
+ * This key is intended for internal use within the AI agents' infrastructure to securely store and access
+ * data related to an agent's context. The associated data includes details such as message history, node identifiers,
+ * and the last input processed by the agent, allowing seamless tracking and management of an agent's state.
+ *
+ * The storage key is marked with the `@InternalAgentsApi` annotation, indicating that it is part of the internal
+ * mechanism and not meant for public or general-purpose development use. It may be subject to changes or removal
+ * without notice.
+ */
+@OptIn(InternalAgentsApi::class)
+public val plannerAgentContextDataAdditionalKey: AIAgentStorageKey<PlannerAgentContextData> =
+    AIAgentStorageKey("planner-agent-context-data-key")
+
+/**
+ * Stores the given agent context data within the current AI agent context.
+ *
+ * @param data The context-specific data to be stored for later retrieval or use within the agent context.
+ */
+@InternalAgentsApi
+public fun AIAgentContext.store(data: AgentContextData) {
+    val key = when(data) {
+        is GraphAgentContextData -> graphAgentContextDataAdditionalKey
+        is PlannerAgentContextData -> plannerAgentContextDataAdditionalKey
+    }
+    this.rootContext().store(key, data)
+}
+
+/**
+ * Retrieves the agent-specific context data associated with the current instance.
+ *
+ * This function accesses and returns the contextual information stored as part of the agent's context,
+ * or null if no such data is present.
+ *
+ * Note: This is part of the internal agents API and should be used cautiously, understanding that
+ * it is subject to changes or removal in future updates.
+ *
+ * @return The agent context data, or null if no context data is associated.
+ */
+@InternalAgentsApi
+public fun AIAgentContext.getGraphAgentContextData(): GraphAgentContextData? {
+    return this.rootContext().get(graphAgentContextDataAdditionalKey)
+}
+
+/**
+ * Removes the agent-specific context data associated with the current context.
+ *
+ * This function attempts to remove the context data identified by the `agentContextDataAdditionalKey`.
+ *
+ * @return `true` if the agent context data was successfully removed, or `false` if no data was found to remove.
+ */
+@OptIn(InternalAgentsApi::class)
+public fun AIAgentContext.removeGraphAgentContextData(): Boolean {
+    return this.rootContext().remove(graphAgentContextDataAdditionalKey)
+}
+
+/**
+ * Retrieves the agent-specific context data associated with the current instance.
+ *
+ * This function accesses and returns the contextual information stored as part of the agent's context,
+ * or null if no such data is present.
+ *
+ * Note: This is part of the internal agents API and should be used cautiously, understanding that
+ * it is subject to changes or removal in future updates.
+ *
+ * @return The agent context data, or null if no context data is associated.
+ */
+@InternalAgentsApi
+public fun AIAgentContext.getPlannerAgentContextData(): PlannerAgentContextData? {
+    return this.rootContext().get(plannerAgentContextDataAdditionalKey)
+}
+
+/**
+ * Removes the agent-specific context data associated with the current context.
+ *
+ * This function attempts to remove the context data identified by the `agentContextDataAdditionalKey`.
+ *
+ * @return `true` if the agent context data was successfully removed, or `false` if no data was found to remove.
+ */
+@OptIn(InternalAgentsApi::class)
+public fun AIAgentContext.removePlannerAgentContextData(): Boolean {
+    return this.rootContext().remove(plannerAgentContextDataAdditionalKey)
+}

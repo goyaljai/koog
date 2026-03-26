@@ -10,6 +10,7 @@ import ai.koog.agents.testing.tools.getMockExecutor
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.model.PromptExecutor
 import ai.koog.prompt.executor.ollama.client.OllamaModels
+import ai.koog.serialization.JSONObject
 import ai.koog.serialization.JSONPrimitive
 import ai.koog.serialization.kotlinx.KotlinxSerializer
 import kotlinx.coroutines.test.runTest
@@ -182,10 +183,14 @@ class SubgraphCheckpointsTest {
         val checkpoint = AgentCheckpointData(
             checkpointId = "checkpoint-1",
             createdAt = Clock.System.now(),
-            nodePath = path(agentId, "repeated-subgraphs-test", "sg1", "sgNode1"),
-            lastInput = JSONPrimitive("Input at checkpoint"),
             messageHistory = listOf(),
-            version = 1L
+            version = 1L,
+            properties = JSONObject(
+                mapOf(
+                    "nodePath" to JSONPrimitive(path(agentId, "repeated-subgraphs-test", "sg1", "sgNode1")),
+                    "lastInput" to JSONPrimitive("Input at checkpoint")
+                )
+            )
         )
 
         inMemoryPersistence.saveCheckpoint(agentId, checkpoint)

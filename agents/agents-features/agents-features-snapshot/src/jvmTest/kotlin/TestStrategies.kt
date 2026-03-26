@@ -5,7 +5,9 @@ import ai.koog.agents.core.dsl.builder.forwardTo
 import ai.koog.agents.core.dsl.builder.node
 import ai.koog.agents.core.dsl.builder.strategy
 import ai.koog.agents.core.dsl.builder.subgraph
+import ai.koog.agents.snapshot.feature.AgentCheckpointData
 import ai.koog.agents.snapshot.feature.withPersistence
+import ai.koog.serialization.JSONObject
 import ai.koog.serialization.JSONPrimitive
 import ai.koog.serialization.typeToken
 
@@ -162,8 +164,9 @@ private fun nodeRollbackToCheckpoint(
         withPersistence {
             val checkpoint = rollbackToCheckpoint(checkpointId, it)!!
             teleportState.teleported = true
+            val nodePath = checkpoint.properties?.entries?.get("nodePath") as? JSONPrimitive
             llm.writeSession {
-                appendPrompt { user { text("Rolling back to node ${checkpoint.nodePath}") } }
+                appendPrompt { user { text("Rolling back to node ${nodePath?.content}") } }
             }
         }
         return@node "$it\nrolled back"

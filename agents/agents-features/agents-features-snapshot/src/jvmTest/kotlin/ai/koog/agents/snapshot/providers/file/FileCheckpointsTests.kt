@@ -13,6 +13,7 @@ import ai.koog.prompt.executor.ollama.client.OllamaModels
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
 import ai.koog.prompt.message.ResponseMetaInfo
+import ai.koog.serialization.JSONObject
 import ai.koog.serialization.JSONPrimitive
 import ai.koog.serialization.kotlinx.KotlinxSerializer
 import kotlinx.coroutines.test.runTest
@@ -126,13 +127,17 @@ class FileCheckpointsTests {
         val testCheckpoint = AgentCheckpointData(
             checkpointId = "testCheckpointId",
             createdAt = time,
-            nodePath = path(agentId, "straight-forward", "Node2"),
-            lastInput = JSONPrimitive("Test input"),
             messageHistory = listOf(
                 Message.User("User message", metaInfo = RequestMetaInfo(time)),
                 Message.Assistant("Assistant message", metaInfo = ResponseMetaInfo(time))
             ),
-            version = 0L
+            version = 0L,
+            properties = JSONObject(
+                mapOf(
+                    "nodePath" to JSONPrimitive(path(agentId, "straight-forward", "Node2")),
+                    "lastInput" to JSONPrimitive("Test input")
+                )
+            )
         )
 
         provider.saveCheckpoint(sessionId, testCheckpoint)
@@ -168,14 +173,18 @@ class FileCheckpointsTests {
         val testCheckpoint = AgentCheckpointData(
             checkpointId = "testCheckpointId",
             createdAt = time,
-            nodePath = path(agentId, "straight-forward", "Node2"),
-            lastOutput = JSONPrimitive("Test output"),
             messageHistory = listOf(
                 Message.User("User message", metaInfo = RequestMetaInfo(time)),
                 Message.Assistant("Assistant message", metaInfo = ResponseMetaInfo(time)),
                 Message.User("Node 2 output (already calculated)", metaInfo = RequestMetaInfo(time))
             ),
-            version = 0L
+            version = 0L,
+            properties = JSONObject(
+                mapOf(
+                    "nodePath" to JSONPrimitive(path(agentId, "straight-forward", "Node2")),
+                    "lastOutput" to JSONPrimitive("Test output")
+                )
+            )
         )
 
         provider.saveCheckpoint(sessionId, testCheckpoint)
@@ -210,25 +219,33 @@ class FileCheckpointsTests {
         val testCheckpoint2 = AgentCheckpointData(
             checkpointId = "testCheckpointId2",
             createdAt = time - 10.seconds,
-            nodePath = path(agentId, "straight-forward", "Node1"),
-            lastInput = JSONPrimitive("Test input"),
             messageHistory = listOf(
                 Message.User("Earlier message", metaInfo = RequestMetaInfo(time)),
                 Message.Assistant("Earlier response", metaInfo = ResponseMetaInfo(time))
             ),
-            version = 0L
+            version = 0L,
+            properties = JSONObject(
+                mapOf(
+                    "nodePath" to JSONPrimitive(path(agentId, "straight-forward", "Node1")),
+                    "lastInput" to JSONPrimitive("Test input")
+                )
+            )
         )
 
         val testCheckpoint = AgentCheckpointData(
             checkpointId = "testCheckpointId",
             createdAt = time,
-            nodePath = path(agentId, "straight-forward", "Node2"),
-            lastInput = JSONPrimitive("Test input"),
             messageHistory = listOf(
                 Message.User("User message", metaInfo = RequestMetaInfo(time)),
                 Message.Assistant("Assistant message", metaInfo = ResponseMetaInfo(time))
             ),
-            version = testCheckpoint2.version.plus(1)
+            version = testCheckpoint2.version.plus(1),
+            properties = JSONObject(
+                mapOf(
+                    "nodePath" to JSONPrimitive(path(agentId, "straight-forward", "Node2")),
+                    "lastInput" to JSONPrimitive("Test input")
+                )
+            )
         )
 
         provider.saveCheckpoint(sessionId, testCheckpoint)

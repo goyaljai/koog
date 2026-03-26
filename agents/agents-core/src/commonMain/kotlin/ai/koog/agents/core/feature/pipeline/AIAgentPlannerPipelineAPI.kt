@@ -10,6 +10,7 @@ import ai.koog.agents.core.feature.handler.planner.PlanCreationCompletedContext
 import ai.koog.agents.core.feature.handler.planner.PlanCreationStartingContext
 import ai.koog.agents.core.feature.handler.planner.StepExecutionCompletedContext
 import ai.koog.agents.core.feature.handler.planner.StepExecutionStartingContext
+import ai.koog.serialization.TypeToken
 
 /**
  * Platform-agnostic API for planner agent pipelines, extending the base pipeline API
@@ -33,7 +34,9 @@ public interface AIAgentPlannerPipelineAPI : AIAgentPipelineAPI {
         executionInfo: AgentExecutionInfo,
         context: AIAgentContext,
         state: Any,
+        stateType: TypeToken?,
         plan: Any?,
+        planType: TypeToken?,
         stepIndex: Int,
     )
 
@@ -52,7 +55,9 @@ public interface AIAgentPlannerPipelineAPI : AIAgentPipelineAPI {
         executionInfo: AgentExecutionInfo,
         context: AIAgentContext,
         state: Any,
+        stateType: TypeToken?,
         plan: Any,
+        planType: TypeToken?,
         stepIndex: Int,
     )
 
@@ -72,7 +77,9 @@ public interface AIAgentPlannerPipelineAPI : AIAgentPipelineAPI {
         executionInfo: AgentExecutionInfo,
         context: AIAgentContext,
         state: Any,
+        stateType: TypeToken?,
         plan: Any,
+        planType: TypeToken?,
         stepIndex: Int
     )
 
@@ -92,7 +99,9 @@ public interface AIAgentPlannerPipelineAPI : AIAgentPipelineAPI {
         executionInfo: AgentExecutionInfo,
         context: AIAgentContext,
         state: Any,
+        stateType: TypeToken?,
         plan: Any,
+        planType: TypeToken?,
         stepIndex: Int,
     )
 
@@ -111,7 +120,9 @@ public interface AIAgentPlannerPipelineAPI : AIAgentPipelineAPI {
         executionInfo: AgentExecutionInfo,
         context: AIAgentContext,
         state: Any,
+        stateType: TypeToken?,
         plan: Any,
+        planType: TypeToken?,
         stepIndex: Int,
     )
 
@@ -131,7 +142,9 @@ public interface AIAgentPlannerPipelineAPI : AIAgentPipelineAPI {
         executionInfo: AgentExecutionInfo,
         context: AIAgentContext,
         state: Any,
+        stateType: TypeToken?,
         plan: Any,
+        planType: TypeToken?,
         isCompleted: Boolean,
         stepIndex: Int,
     )

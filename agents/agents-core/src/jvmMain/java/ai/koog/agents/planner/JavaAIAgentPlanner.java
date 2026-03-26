@@ -2,6 +2,7 @@ package ai.koog.agents.planner;
 
 import ai.koog.agents.annotations.JavaAPI;
 import ai.koog.agents.core.agent.context.AIAgentPlannerContext;
+import ai.koog.serialization.TypeToken;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -9,8 +10,8 @@ import org.jetbrains.annotations.Nullable;
 @JavaAPI
 public abstract class JavaAIAgentPlanner<State, Plan> extends AIAgentPlanner<State, Plan> {
 
-    public JavaAIAgentPlanner() {
-        super(null);
+    public JavaAIAgentPlanner(Class<State> stateType, Class<Plan> planType) {
+        super(TypeToken.of(stateType), TypeToken.of(planType));
     }
 
     abstract protected Plan buildPlan(

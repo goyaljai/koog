@@ -8,6 +8,7 @@ import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.ollama.client.OllamaModels
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.ResponseMetaInfo
+import ai.koog.serialization.JSONObject
 import ai.koog.serialization.JSONPrimitive
 import ai.koog.serialization.kotlinx.KotlinxSerializer
 import kotlinx.coroutines.test.runTest
@@ -28,10 +29,14 @@ class PersistenceRestoreStrategyTests {
         val checkpoint = AgentCheckpointData(
             checkpointId = "chk-1",
             createdAt = Clock.System.now(),
-            nodePath = "$agentId/restore-strategy/Node2",
-            lastInput = JSONPrimitive("input-for-node2"),
             messageHistory = listOf(Message.Assistant("History Before", ResponseMetaInfo(Clock.System.now()))),
-            version = 0L
+            version = 0L,
+            properties = JSONObject(
+                mapOf(
+                    "nodePath" to JSONPrimitive("$agentId/restore-strategy/Node2"),
+                    "lastInput" to JSONPrimitive("input-for-node2")
+                )
+            )
         )
 
         provider.saveCheckpoint(sessionId, checkpoint)
