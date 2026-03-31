@@ -36,6 +36,8 @@ include(":agents:agents-test")
 include(":agents:agents-tools")
 include(":agents:agents-utils")
 
+include(":cli-transport")
+
 include(":integration-tests")
 
 include(":koog-agents")

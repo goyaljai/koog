@@ -68,6 +68,7 @@ val included = setOf(
     ":agents:agents-mcp-metadata",
     ":agents:agents-tools",
     ":agents:agents-utils",
+    ":cli-transport",
     ":embeddings:embeddings-base",
     ":embeddings:embeddings-llm",
     ":prompt:prompt-cache:prompt-cache-files",

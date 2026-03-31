@@ -1,0 +1,47 @@
+import ai.koog.gradle.publish.maven.Publishing.publishToMaven
+
+group = rootProject.group
+version = rootProject.version
+
+plugins {
+    id("ai.kotlin.multiplatform")
+}
+
+kotlin {
+    sourceSets {
+        commonMain {
+            dependencies {
+                api(libs.kotlinx.coroutines.core)
+                implementation(libs.oshai.kotlin.logging)
+
+                api(project(":utils"))
+            }
+        }
+
+        jvmCommonMain {
+            dependencies {
+                api(project(":agents:agents-utils"))
+            }
+        }
+
+        commonTest {
+            dependencies {
+                implementation(libs.kotest.assertions.core)
+                implementation(project(":test-utils"))
+            }
+        }
+
+        jvmTest {
+            dependencies {
+                implementation(kotlin("test-junit5"))
+                implementation(libs.junit.jupiter.params)
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(project(":test-utils"))
+            }
+        }
+    }
+
+    explicitApi()
+}
+
+publishToMaven()
