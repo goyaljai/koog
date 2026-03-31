@@ -7,6 +7,7 @@ import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.agents.core.agent.context.AIAgentContext
 import ai.koog.agents.core.agent.entity.AIAgentGraphStrategy
 import ai.koog.agents.core.agent.session.AIAgentRunSession
+import ai.koog.agents.core.dsl.builder.AIAgentNodeDelegate
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.agents.planner.AIAgentPlannerStrategy
 import ai.koog.agents.planner.PlannerAIAgent
@@ -15,6 +16,7 @@ import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.processor.ResponseProcessor
 import ai.koog.utils.io.Closeable
 import kotlin.jvm.JvmStatic
+import kotlin.reflect.typeOf
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -66,8 +68,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
         public fun builder(): AIAgentBuilder
 
         /**
-         * Creates an instance of an AI agent based on the provided configuration, input/output types,
-         * and execution strategy.
+         * Creates an instance of an AI agent based on the provided configuration and execution strategy.
          *
          * @param Input The type of the input the AI agent will process.
          * @param Output The type of the output the AI agent will produce.
@@ -78,7 +79,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
          * @param id Unique identifier for the agent. Random UUID will be generated if set to null.
          * @param clock The clock to be used for time-related operations. Defaults to the system clock.
          * @param installFeatures A lambda expression to install additional features in the agent's feature context. Defaults to an empty implementation.
-         * @return An instance of an AI agent configured with the specified parameters and capable of executing its logic.
+         * @return An instance of an AI agent configured with the specified parameters.
          */
         @OptIn(ExperimentalUuidApi::class)
         public inline operator fun <reified Input, reified Output> invoke(
@@ -92,7 +93,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
         ): AIAgent<Input, Output>
 
         /**
-         * Operator function to create and invoke an AI agent with the given parameters.
+         * Creates an instance of an AI agent based on the provided configuration and execution strategy.
          *
          * @param promptExecutor The executor responsible for running the prompt and generating outputs.
          * @param agentConfig Configuration settings for the AI agent.
@@ -100,7 +101,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
          * @param toolRegistry Registry of tools available for the AI agent to use. Defaults to an empty registry.
          * @param id Unique identifier for the agent. Random UUID will be generated if set to null.
          * @param installFeatures Lambda function for installing additional features into the feature context. Defaults to an empty lambda.
-         * @return An instance of AIAgent configured with the graph strategy.
+         * @return An instance of an AI agent configured with the specified parameters.
          */
         @OptIn(ExperimentalUuidApi::class)
         public operator fun invoke(
@@ -113,7 +114,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
         ): GraphAIAgent<String, String>
 
         /**
-         * Creates a functional AI agent with the provided configurations and execution strategy.
+         * Creates an instance of an AI agent based on the provided configuration and execution strategy.
          *
          * @param Input The type of the input the AI agent will process.
          * @param Output The type of the output the AI agent will produce.
@@ -124,7 +125,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
          * @param id Unique identifier for the agent. Random UUID will be generated if set to null.
          * @param clock The clock instance used for time-related operations. Defaults to the system clock.
          * @param installFeatures A lambda expression to install additional features in the agent's feature context. Defaults to an empty implementation.
-         * @return A `FunctionalAIAgent` instance configured with the provided parameters and execution strategy.
+         * @return An instance of an AI agent configured with the specified parameters.
          */
         @OptIn(ExperimentalUuidApi::class)
         public operator fun <Input, Output> invoke(
@@ -138,7 +139,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
         ): FunctionalAIAgent<Input, Output>
 
         /**
-         * Construction of an AI agent with the specified configurations and parameters.
+         * Creates an instance of an AI agent based on the provided configuration and execution strategy.
          *
          * @param promptExecutor The executor responsible for processing language model prompts.
          * @param llmModel The specific large language model to be used for the agent.
@@ -151,7 +152,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
          * @param numberOfChoices The number of response choices to be generated, defaulting to 1.
          * @param maxIterations The maximum number of iterations the agent is allowed to perform, defaulting to 50.
          * @param installFeatures A function to configure additional features into the agent during initialization. Defaults to an empty configuration.
-         * @return An instance of [AIAgent] configured with the provided parameters.
+         * @return An instance of an AI agent configured with the specified parameters.
          */
         @OptIn(ExperimentalUuidApi::class)
         public operator fun invoke(
@@ -169,7 +170,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
         ): AIAgent<String, String>
 
         /**
-         * Creates and configures an AI agent using the provided parameters.
+         * Creates an instance of an AI agent based on the provided configuration and execution strategy.
          *
          * @param Input The input type for the AI agent.
          * @param Output The output type for the AI agent.
@@ -185,7 +186,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
          * @param numberOfChoices The number of choices the model should generate per invocation. Defaults to `1`.
          * @param maxIterations The maximum number of iterations the agent can perform. Defaults to `50`.
          * @param installFeatures An extension function on `FeatureContext` to install custom features for the agent. Defaults to an empty lambda.
-         * @return A configured [AIAgent] instance that can process inputs and generate outputs using the specified strategy and model.
+         * @return An instance of an AI agent configured with the specified parameters.
          */
         @OptIn(ExperimentalUuidApi::class)
         public inline operator fun <reified Input, reified Output> invoke(
@@ -204,8 +205,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
         ): AIAgent<Input, Output>
 
         /**
-         * Creates an [FunctionalAIAgent] with the specified parameters to execute a strategy with the assistance of a tool registry,
-         * configured language model, and associated features.
+         * Creates an instance of an AI agent based on the provided configuration and execution strategy.
          *
          * @param Input The type of input accepted by the agent.
          * @param Output The type of output produced by the agent.
@@ -220,7 +220,7 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
          * @param numberOfChoices The number of response choices to generate when querying the language model. Default is 1.
          * @param maxIterations The maximum number of iterations the agent is allowed to perform during execution. Default is 50.
          * @param installFeatures A lambda to configure and install features in the agent's context.
-         * @return An AI agent instance configured with the provided parameters and ready to execute the specified strategy.
+         * @return An instance of an AI agent configured with the specified parameters.
          */
         public operator fun <Input, Output> invoke(
             promptExecutor: PromptExecutor,
@@ -288,4 +288,16 @@ public expect abstract class AIAgent<Input, Output> constructor() : Closeable {
             installFeatures: PlannerAIAgent.FeatureContext.() -> Unit = {},
         ): AIAgent<Input, Output>
     }
+}
+
+/**
+ * Generates a node that runs the [AIAgent].
+ */
+public inline fun <reified Input, reified Output> AIAgent<Input, Output>.asNode(name: String? = null): AIAgentNodeDelegate<Input, Output> {
+    return AIAgentNodeDelegate(
+        name = name,
+        inputType = typeOf<Input>(),
+        outputType = typeOf<Output>(),
+        execute = { input -> run(input) }
+    )
 }
