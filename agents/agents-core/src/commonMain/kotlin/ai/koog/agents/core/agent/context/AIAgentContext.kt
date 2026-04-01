@@ -278,7 +278,7 @@ public val plannerAgentContextDataAdditionalKey: AIAgentStorageKey<PlannerAgentC
  */
 @InternalAgentsApi
 public fun AIAgentContext.store(data: AgentContextData) {
-    val key = when(data) {
+    val key = when (data) {
         is GraphAgentContextData -> graphAgentContextDataAdditionalKey
         is PlannerAgentContextData -> plannerAgentContextDataAdditionalKey
     }
