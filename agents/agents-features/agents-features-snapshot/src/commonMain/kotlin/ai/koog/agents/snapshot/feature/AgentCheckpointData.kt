@@ -16,8 +16,10 @@ import ai.koog.serialization.JSONNull
 import ai.koog.serialization.JSONObject
 import ai.koog.serialization.JSONPrimitive
 import ai.koog.serialization.JSONSerializer
+import ai.koog.serialization.kotlinx.toKotlinxJsonElement
 import ai.koog.serialization.typeToken
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -70,7 +72,7 @@ public data class AgentCheckpointData(
 
     @Deprecated("nodePath is deprecated, use properties[\"nodePath\"] instead")
     public val nodePath: String
-        get() = properties.entries["nodePath"]!!.toString()
+        get() = properties.entries["nodePath"]!!.toKotlinxJsonElement().jsonPrimitive.content
 
     @Deprecated("lstInput is deprecated, use properties[\"lastInput\"] instead")
     public val lastInput: JSONElement
