@@ -7,9 +7,9 @@ import ai.koog.agents.snapshot.feature.AgentCheckpointData
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
 import ai.koog.prompt.message.ResponseMetaInfo
+import ai.koog.serialization.JSONPrimitive
 import kotlinx.coroutines.runBlocking
 import kotlin.time.Clock
-import kotlinx.serialization.json.JsonPrimitive
 import org.jetbrains.exposed.sql.Database
 
 /**
@@ -171,7 +171,7 @@ object SQLPersistentAgentExample {
             checkpointId = checkpointId,
             createdAt = Clock.System.now(),
             nodePath = "example-node",
-            lastInput = JsonPrimitive("Sample input for $checkpointId"),
+            lastInput = JSONPrimitive("Sample input for $checkpointId"),
             messageHistory = listOf(
                 Message.System("You are a helpful assistant", RequestMetaInfo.create(Clock.System)),
                 Message.User("Hello, agent!", RequestMetaInfo.create(Clock.System)),

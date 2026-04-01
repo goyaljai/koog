@@ -14,6 +14,10 @@ public abstract class JavaAIAgentPlanner<State, Plan> extends AIAgentPlanner<Sta
         super(TypeToken.of(stateType), TypeToken.of(planType));
     }
 
+    public JavaAIAgentPlanner() {
+        super();
+    }
+
     abstract protected Plan buildPlan(
         AIAgentPlannerContext context,
         State state,

@@ -38,7 +38,48 @@ public data class AgentCheckpointData(
     val messageHistory: List<Message>,
     val version: Long,
     val properties: JSONObject
-)
+) {
+
+    /**
+     * Creates an instance of `AgentCheckpointData` using graph properties.
+     */
+    @Deprecated("The nodePath, lastInput, and lastOutput should be put in the properties")
+    public constructor(
+        checkpointId: String,
+        createdAt: Instant,
+        nodePath: String,
+        lastInput: JSONElement = JSONNull,
+        lastOutput: JSONElement = JSONNull,
+        messageHistory: List<Message>,
+        version: Long,
+        properties: JSONObject? = null
+    ) : this(
+        checkpointId,
+        createdAt,
+        messageHistory,
+        version,
+        JSONObject(
+            buildMap {
+                properties?.entries?.let { putAll(it) }
+                put("nodePath", JSONPrimitive(nodePath))
+                put("lastInput", lastInput)
+                put("lastOutput", lastOutput)
+            }
+        )
+    )
+
+    @Deprecated("nodePath is deprecated, use properties[\"nodePath\"] instead")
+    public val nodePath: String
+        get() = properties.entries["nodePath"]!!.toString()
+
+    @Deprecated("lstInput is deprecated, use properties[\"lastInput\"] instead")
+    public val lastInput: JSONElement
+        get() = properties.entries["lastInput"]!!
+
+    @Deprecated("lstOutput is deprecated, use properties[\"lastOutput\"] instead")
+    public val lastOutput: JSONElement
+        get() = properties.entries["lastOutput"]!!
+}
 
 /**
  * Creates a tombstone checkpoint for an agent's session.
