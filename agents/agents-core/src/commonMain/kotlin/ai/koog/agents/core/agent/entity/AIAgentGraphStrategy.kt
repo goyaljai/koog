@@ -10,6 +10,7 @@ import ai.koog.agents.core.agent.context.removeGraphAgentContextData
 import ai.koog.agents.core.agent.execution.DEFAULT_AGENT_PATH_SEPARATOR
 import ai.koog.agents.core.annotation.InternalAgentsApi
 import ai.koog.serialization.JSONElement
+import ai.koog.serialization.JSONNull
 import ai.koog.serialization.kotlinx.toKoogJSONElement
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
@@ -111,8 +112,8 @@ public open class AIAgentGraphStrategyBase<TInput, TOutput>(
         // Set current graph node:
         @Suppress("DEPRECATION")
         when {
-            data.lastInput != null -> setExecutionPoint(nodePath, data.lastInput, agentContext)
-            data.lastOutput != null -> setExecutionPointAfterNode(nodePath, data.lastOutput, agentContext)
+            data.lastInput != JSONNull -> setExecutionPoint(nodePath, data.lastInput, agentContext)
+            data.lastOutput != JSONNull -> setExecutionPointAfterNode(nodePath, data.lastOutput, agentContext)
 
             // Unexpected state, either input (before 0.6.1) or output (since 0.6.1) should be saved in checkpoints:
             else -> {}

@@ -105,30 +105,32 @@ public fun AgentCheckpointData.toAgentContextData(
     additionalRollbackActions: suspend (AIAgentContext) -> Unit = {}
 ): AgentContextData? {
     runCatching {
-        val graphCheckpointProperties = serializer.decodeFromJSONElement<GraphCheckpointProperties>(
+        serializer.decodeFromJSONElement<GraphCheckpointProperties>(
             properties,
             typeToken<GraphCheckpointProperties>()
         )
+    }.getOrNull()?.let { graphProperties ->
         return GraphAgentContextData(
             messageHistory = messageHistory,
-            nodePath = graphCheckpointProperties.nodePath,
-            lastInput = graphCheckpointProperties.lastInput,
-            lastOutput = graphCheckpointProperties.lastOutput,
+            nodePath = graphProperties.nodePath,
+            lastInput = graphProperties.lastInput,
+            lastOutput = graphProperties.lastOutput,
             rollbackStrategy = rollbackStrategy,
             additionalRollbackActions = additionalRollbackActions
         )
     }
 
     runCatching {
-        val plannerCheckpointProperties = serializer.decodeFromJSONElement<PlannerCheckpointProperties>(
+        serializer.decodeFromJSONElement<PlannerCheckpointProperties>(
             properties,
             typeToken<PlannerCheckpointProperties>()
         )
+    }.getOrNull()?.let { plannerProperties ->
         return PlannerAgentContextData(
             messageHistory = messageHistory,
-            state = plannerCheckpointProperties.state,
-            plan = plannerCheckpointProperties.plan,
-            executionPoint = plannerCheckpointProperties.executionPoint,
+            state = plannerProperties.state,
+            plan = plannerProperties.plan,
+            executionPoint = plannerProperties.executionPoint,
             rollbackStrategy = rollbackStrategy,
             additionalRollbackActions = additionalRollbackActions
         )

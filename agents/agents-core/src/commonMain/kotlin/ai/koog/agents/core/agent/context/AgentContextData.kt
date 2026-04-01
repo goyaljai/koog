@@ -6,6 +6,7 @@ import ai.koog.agents.core.annotation.InternalAgentsApi
 import ai.koog.agents.planner.PlannerAgentExecutionPoint
 import ai.koog.prompt.message.Message
 import ai.koog.serialization.JSONElement
+import ai.koog.serialization.JSONNull
 
 @InternalAgentsApi
 public sealed class AgentContextData {
@@ -19,14 +20,14 @@ public class GraphAgentContextData(
     override val messageHistory: List<Message>,
     internal val nodePath: String,
     @Deprecated("Use lastOutput instead, lastOutput will be removed in future versions")
-    internal val lastInput: JSONElement? = null,
-    internal val lastOutput: JSONElement? = null,
+    internal val lastInput: JSONElement = JSONNull,
+    internal val lastOutput: JSONElement = JSONNull,
     override val rollbackStrategy: RollbackStrategy,
     override val additionalRollbackActions: suspend (AIAgentContext) -> Unit = {}
 ) : AgentContextData() {
     init {
-        require(lastInput == null || lastOutput == null) { "`lastInput` and `lastOutput` cannot be both set" }
-        require(lastInput != null || lastOutput != null) { "`lastInput` (until 0.6.0) or `lastOutput` (since 0.6.1) must be set" }
+        require(lastInput == JSONNull || lastOutput == JSONNull) { "`lastInput` and `lastOutput` cannot be both set" }
+        require(lastInput == JSONNull || lastOutput == JSONNull) { "`lastInput` (until 0.6.0) or `lastOutput` (since 0.6.1) must be set" }
     }
 }
 
