@@ -1,5 +1,7 @@
 @file:Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
 
+package ai.koog.agents.snapshot
+
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.agent.AIAgentService
 import ai.koog.agents.core.agent.GraphAIAgentService
