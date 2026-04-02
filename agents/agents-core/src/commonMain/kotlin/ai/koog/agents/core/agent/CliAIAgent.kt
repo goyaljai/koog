@@ -123,12 +123,7 @@ public class CliAIAgent<Input, Output> internal constructor(
     override suspend fun prepareContext(agentInput: Input, runId: String, eventId: String): AIAgentCliContext {
         val toolRegistry = ToolRegistry.EMPTY
 
-        val environment = GenericAgentEnvironment(
-            agentId = id,
-            logger = logger,
-            toolRegistry = toolRegistry,
-            serializer = agentConfig.serializer,
-        )
+        val environment = prepareEnvironment()
 
         val initialLLMContext = AIAgentLLMContext(
             tools = toolRegistry.tools.map { it.descriptor },
@@ -143,11 +138,10 @@ public class CliAIAgent<Input, Output> internal constructor(
         )
 
         val executionInfo = AgentExecutionInfo(parent = null, partName = id)
-        val preparedEnvironment = prepareEnvironment()
 
         // Context
         val initialAgentContext = AIAgentCliContext(
-            environment = preparedEnvironment,
+            environment = environment,
             agentId = id,
             runId = runId,
             agentInput = agentInput,
@@ -163,7 +157,7 @@ public class CliAIAgent<Input, Output> internal constructor(
 
         // Updated environment
         val contextualEnvironment = ContextualAgentEnvironment(
-            environment = preparedEnvironment,
+            environment = environment,
             context = initialAgentContext,
         )
 
