@@ -118,7 +118,15 @@ public object ClaudeCliHelper {
     /**
      * Extracts output from Claude CLI events.
      */
-    public fun extractOutput(events: List<CliEvent.Line>): CliAIAgentResponse {
+    public fun extractOutput(events: List<CliEvent>): CliAIAgentResponse {
+        val failedEvent = events.filterIsInstance<CliEvent.Failed>().firstOrNull()
+        if (failedEvent != null) {
+            return CliAIAgentResponse(
+                content = "Cli failed: ${failedEvent.message}",
+                isError = true
+            )
+        }
+
         val jsonEvents = toJsonStdoutEvents(events)
 
         val resultEvent = jsonEvents
@@ -154,9 +162,20 @@ public object ClaudeCliHelper {
      * Extracts structured output from Claude CLI events.
      */
     public fun <T> extractStructuredOutput(
-        events: List<CliEvent.Line>,
+        events: List<CliEvent>,
         structure: Structure<T, *>
     ): CliAgentStructuredResponse<T> {
+        val failedEvent = events.filterIsInstance<CliEvent.Failed>().firstOrNull()
+        if (failedEvent != null) {
+            return CliAgentStructuredResponse(
+                result = null,
+                response = CliAIAgentResponse(
+                    content = "Cli failed: ${failedEvent.message}",
+                    isError = true
+                )
+            )
+        }
+
         val response = extractOutput(events)
         val jsonEvents = toJsonStdoutEvents(events)
         val resultString = jsonEvents
@@ -216,7 +235,7 @@ public class ClaudeCliStructuredConfig<Input, Output>(
     override fun generateRequest(input: Input): String =
         generateRequest.generateRequest(input)
 
-    override fun extractOutput(events: List<CliEvent.Line>): CliAgentStructuredResponse<Output> =
+    override fun extractOutput(events: List<CliEvent>): CliAgentStructuredResponse<Output> =
         ClaudeCliHelper.extractStructuredOutput(events, structure)
 }
 
@@ -241,6 +260,6 @@ public class ClaudeCliConfig<Input>(
     override fun generateRequest(input: Input): String =
         generateRequest.generateRequest(input)
 
-    override fun extractOutput(events: List<CliEvent.Line>): CliAIAgentResponse =
+    override fun extractOutput(events: List<CliEvent>): CliAIAgentResponse =
         ClaudeCliHelper.extractOutput(events)
 }

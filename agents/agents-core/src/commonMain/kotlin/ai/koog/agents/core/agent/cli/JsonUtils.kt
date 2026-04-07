@@ -24,8 +24,9 @@ public object JsonUtils {
     /**
      * Converts a list of agent events to a list of JSON objects from stdout
      */
-    public fun toJsonStdoutEvents(events: List<CliEvent.Line>): List<JsonObject> =
+    public fun toJsonStdoutEvents(events: List<CliEvent>): List<JsonObject> =
         events
+            .filterIsInstance<CliEvent.Line>()
             .mapNotNull {
                 runCatching {
                     json.decodeFromString<JsonObject>(it.content).jsonObject

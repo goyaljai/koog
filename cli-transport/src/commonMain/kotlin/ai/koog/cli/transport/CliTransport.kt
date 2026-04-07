@@ -8,9 +8,9 @@ import kotlin.time.Duration
  */
 public expect interface CliTransport {
     /**
-     * Checks if the required cli binary is available.
+     * Checks if the cli is available at the specified path.
      */
-    public fun checkAvailability(binary: String): CliAvailability
+    public fun checkAvailability(binaryPath: String, workspace: String): CliAvailability
 
     /**
      * Executes the cli command and returns a Flow of AgentEvents.

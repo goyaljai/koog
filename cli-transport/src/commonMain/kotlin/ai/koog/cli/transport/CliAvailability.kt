@@ -8,12 +8,12 @@ public sealed interface CliAvailability
 /**
  * Indicates that the tool is available.
  */
-public class CliAvailable(public val version: String?) : CliAvailability
+public object CliAvailable : CliAvailability
 
 /**
  * Indicates that the tool is unavailable.
  */
 public class CliUnavailable(
-    public val reason: String,
+    public val reason: String? = null,
     public val cause: Throwable? = null,
 ) : CliAvailability

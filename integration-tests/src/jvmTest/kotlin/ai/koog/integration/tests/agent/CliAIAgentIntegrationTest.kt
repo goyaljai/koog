@@ -142,7 +142,9 @@ class CliAIAgentIntegrationTest : AIAgentTestBase() {
             systemPrompt = cliSystemPrompt,
         )
 
-        assertResponse(agent.run("echo 'hi'").response)
+        val result = agent.run("echo 'hi'")
+        assertResponse(result.response)
+        assertNotNull(result.result)
     }
 
     @Test

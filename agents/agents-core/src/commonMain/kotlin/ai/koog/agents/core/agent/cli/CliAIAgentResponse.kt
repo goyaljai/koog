@@ -41,6 +41,6 @@ public data class CliAIAgentResponse(
  */
 @Serializable
 public data class CliAgentStructuredResponse<out T>(
-    val result: T,
+    val result: T?,
     val response: CliAIAgentResponse
 )

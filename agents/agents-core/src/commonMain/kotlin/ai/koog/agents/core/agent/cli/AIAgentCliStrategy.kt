@@ -20,7 +20,7 @@ public class AIAgentCliStrategy<Input, Output> internal constructor(
     override val name: String = config.binaryPath
 
     override suspend fun execute(context: AIAgentCliContext, input: Input): Output {
-        connect()
+        checkAvailability()
 
         val model = context.config.model
         val systemMessages = context.config.prompt.messages.filterIsInstance<Message.System>()
@@ -35,16 +35,15 @@ public class AIAgentCliStrategy<Input, Output> internal constructor(
             timeout = config.timeout
         )
             .onEach { logEvent(it) }
-            .filterIsInstance<CliEvent.Line>()
             .toList()
 
-        val result = config.extractOutput(events)
+        val result = config.extractOutput(events.filterIsInstance<CliEvent.Line>())
 
         return result
     }
 
-    private fun connect() {
-        val availability = config.transport.checkAvailability(config.binaryPath)
+    private fun checkAvailability() {
+        val availability = config.transport.checkAvailability(config.binaryPath, config.workspace)
         if (availability is CliUnavailable) {
             throw CliNotFoundException(
                 "CLI '${config.binaryPath}' is not available: ${availability.reason}",

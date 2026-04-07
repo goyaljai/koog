@@ -107,7 +107,15 @@ public class CodexCliConfig<Input>(
     override fun generateRequest(input: Input): String =
         generateRequest.generateRequest(input)
 
-    override fun extractOutput(events: List<CliEvent.Line>): CliAIAgentResponse {
+    override fun extractOutput(events: List<CliEvent>): CliAIAgentResponse {
+        val failedEvent = events.filterIsInstance<CliEvent.Failed>().firstOrNull()
+        if (failedEvent != null) {
+            return CliAIAgentResponse(
+                content = "Cli failed: ${failedEvent.message}",
+                isError = true,
+            )
+        }
+
         val jsonEvents = toJsonStdoutEvents(events)
 
         val errorEvent = jsonEvents.lastOrNull { it["type"]?.stringVal == "turn.failed" }

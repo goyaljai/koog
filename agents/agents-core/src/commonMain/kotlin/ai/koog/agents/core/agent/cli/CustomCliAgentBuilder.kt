@@ -32,7 +32,7 @@ public class CustomCliAgentBuilder<Input, Output> internal constructor(
     private var binaryPath: String = ""
     private var flags: (LLModel, List<Message.System>) -> List<String> = { _, _ -> emptyList() }
     private var generateRequest: CliConfig.GenerateRequest<Input>? = null
-    private var extractOutput: ((List<CliEvent.Line>) -> Output)? = null
+    private var extractOutput: ((List<CliEvent>) -> Output)? = null
     private var env: Map<String, String> = emptyMap()
 
     override fun self(): CustomCliAgentBuilder<Input, Output> = this
@@ -61,7 +61,7 @@ public class CustomCliAgentBuilder<Input, Output> internal constructor(
     /**
      * Sets the function that extracts the output from CLI event lines.
      */
-    public fun extractOutput(extractOutput: (List<CliEvent.Line>) -> Output): CustomCliAgentBuilder<Input, Output> = self().apply {
+    public fun extractOutput(extractOutput: (List<CliEvent>) -> Output): CustomCliAgentBuilder<Input, Output> = self().apply {
         this.extractOutput = extractOutput
     }
 
@@ -94,7 +94,7 @@ public class CustomCliAgentBuilder<Input, Output> internal constructor(
             override fun generateRequest(input: Input): String =
                 generateRequest.generateRequest(input)
 
-            override fun extractOutput(events: List<CliEvent.Line>): Output =
+            override fun extractOutput(events: List<CliEvent>): Output =
                 extractOutputNotNull(events) ?: throw IllegalStateException("Failed to extract output")
         }
 

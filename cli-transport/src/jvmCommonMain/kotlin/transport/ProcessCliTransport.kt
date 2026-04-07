@@ -23,25 +23,24 @@ public abstract class ProcessCliTransport : CliTransport {
      */
     protected abstract fun buildCommand(
         command: List<String>,
-        workspace: String = ".",
+        workspace: String,
         env: Map<String, String> = emptyMap()
     ): List<String>
 
-    override fun checkAvailability(binary: String): CliAvailability = try {
-        val process = ProcessBuilder(buildCommand(listOf(binary, "--version")))
-            .directory(File("."))
+    override fun checkAvailability(binaryPath: String, workspace: String): CliAvailability = try {
+        val exitCode = ProcessBuilder(buildCommand(listOf(binaryPath, "--version"), workspace))
+            .directory(File(workspace))
             .start()
-        val version = process.inputStream.bufferedReader().use { it.readLine()?.trim() }
-        val exitCode = process.waitFor()
+            .waitFor()
         if (exitCode == 0) {
-            CliAvailable(version)
+            CliAvailable
         } else {
             CliUnavailable("Process exited with code $exitCode")
         }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        CliUnavailable(reason = e.message ?: e.toString(), cause = e)
+        CliUnavailable(reason = e.message, cause = e)
     }
 
     override fun execute(

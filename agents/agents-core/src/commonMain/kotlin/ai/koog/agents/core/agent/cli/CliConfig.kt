@@ -32,7 +32,7 @@ public interface CliConfig<Input, Output> {
     public fun generateRequest(input: Input): String
 
     /** Extracts the output from CLI event lines. */
-    public fun extractOutput(events: List<CliEvent.Line>): Output
+    public fun extractOutput(events: List<CliEvent>): Output
 
     /**
      * Represents a function that generates a request string from context and input.
