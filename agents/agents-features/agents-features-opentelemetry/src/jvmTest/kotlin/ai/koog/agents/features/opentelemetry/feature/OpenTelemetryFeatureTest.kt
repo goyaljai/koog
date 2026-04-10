@@ -1,12 +1,13 @@
 package ai.koog.agents.features.opentelemetry.feature
 
 import ai.koog.agents.core.agent.execution.AgentExecutionInfo
+import ai.koog.agents.features.opentelemetry.mock.MockContextFactory
 import ai.koog.agents.features.opentelemetry.mock.MockSpan
 import ai.koog.agents.features.opentelemetry.mock.MockTracer
 import ai.koog.agents.features.opentelemetry.span.GenAIAgentSpanBuilder
 import ai.koog.agents.features.opentelemetry.span.SpanCollector
 import ai.koog.agents.features.opentelemetry.span.SpanType
-import io.opentelemetry.api.trace.SpanKind
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -76,6 +77,7 @@ class OpenTelemetryFeatureTest {
     fun testEndUnfinishedSpans_EndsAllSpansWhenNoFilterProvided() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
         val openTelemetry = OpenTelemetry.Feature
 
         // Create and collect spans
@@ -85,7 +87,7 @@ class OpenTelemetryFeatureTest {
             id = "span1",
             name = "span1-name",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         spanCollector.collectSpan(span1, AgentExecutionInfo(null, "span1"))
 
         val span2 = GenAIAgentSpanBuilder(
@@ -94,7 +96,7 @@ class OpenTelemetryFeatureTest {
             id = "span2",
             name = "span2-name",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         spanCollector.collectSpan(span2, AgentExecutionInfo(AgentExecutionInfo(null, "span1"), "span2"))
 
         assertEquals(2, spanCollector.activeSpansCount)
@@ -114,6 +116,7 @@ class OpenTelemetryFeatureTest {
     fun testEndUnfinishedSpans_EndsOnlyMatchingSpansWhenFilterProvided() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
         val openTelemetry = OpenTelemetry.Feature
 
         // Create spans of different types
@@ -123,7 +126,7 @@ class OpenTelemetryFeatureTest {
             id = "create-agent",
             name = "create-agent-name",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         spanCollector.collectSpan(createAgentSpan, AgentExecutionInfo(null, "create-agent"))
 
         val invokeAgentSpan = GenAIAgentSpanBuilder(
@@ -132,7 +135,7 @@ class OpenTelemetryFeatureTest {
             id = "invoke-agent",
             name = "invoke-agent-name",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         spanCollector.collectSpan(invokeAgentSpan, AgentExecutionInfo(AgentExecutionInfo(null, "create-agent"), "invoke-agent"))
 
         val nodeSpan = GenAIAgentSpanBuilder(
@@ -141,7 +144,7 @@ class OpenTelemetryFeatureTest {
             id = "node",
             name = "node-name",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         spanCollector.collectSpan(nodeSpan, AgentExecutionInfo(AgentExecutionInfo(AgentExecutionInfo(null, "create-agent"), "invoke-agent"), "node"))
 
         assertEquals(3, spanCollector.activeSpansCount)
@@ -165,6 +168,7 @@ class OpenTelemetryFeatureTest {
     fun testEndUnfinishedSpans_HandlesDeepHierarchy() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
         val openTelemetry = OpenTelemetry.Feature
 
         // Create a deep hierarchy: root -> level1 -> level2 -> level3
@@ -174,7 +178,7 @@ class OpenTelemetryFeatureTest {
             id = "root",
             name = "root-name",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val rootPath = AgentExecutionInfo(null, "root")
         spanCollector.collectSpan(rootSpan, rootPath)
 
@@ -184,7 +188,7 @@ class OpenTelemetryFeatureTest {
             id = "level1",
             name = "level1-name",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val level1Path = AgentExecutionInfo(rootPath, "level1")
         spanCollector.collectSpan(level1Span, level1Path)
 
@@ -194,7 +198,7 @@ class OpenTelemetryFeatureTest {
             id = "level2",
             name = "level2-name",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val level2Path = AgentExecutionInfo(level1Path, "level2")
         spanCollector.collectSpan(level2Span, level2Path)
 
@@ -204,7 +208,7 @@ class OpenTelemetryFeatureTest {
             id = "level3",
             name = "level3-name",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val level3Path = AgentExecutionInfo(level2Path, "level3")
         spanCollector.collectSpan(level3Span, level3Path)
 

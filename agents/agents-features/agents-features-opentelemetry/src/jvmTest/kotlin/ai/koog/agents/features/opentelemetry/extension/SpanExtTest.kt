@@ -1,13 +1,11 @@
 package ai.koog.agents.features.opentelemetry.extension
 
-import ai.koog.agents.features.opentelemetry.assertMapsEqual
 import ai.koog.agents.features.opentelemetry.attribute.CustomAttribute
 import ai.koog.agents.features.opentelemetry.mock.MockEventBodyField
 import ai.koog.agents.features.opentelemetry.mock.MockGenAIAgentEvent
 import ai.koog.agents.features.opentelemetry.mock.MockSpan
 import ai.koog.agents.features.opentelemetry.span.SpanEndStatus
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.kotlin.tracing.data.StatusData
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -17,19 +15,17 @@ class SpanExtTest {
     fun `setSpanStatus sets OK by default`() {
         val span = MockSpan()
         span.setSpanStatus(endStatus = null)
-        assertEquals(StatusCode.OK, span.status)
-        assertEquals("", span.statusDescription)
+        assertEquals(StatusData.Ok, span.status)
     }
 
     @Test
     fun `setSpanStatus sets provided code and description`() {
         val span = MockSpan()
-        span.setSpanStatus(endStatus = SpanEndStatus(StatusCode.ERROR, "test description"))
-        assertEquals(StatusCode.ERROR, span.status)
-        assertEquals("test description", span.statusDescription)
+        span.setSpanStatus(endStatus = SpanEndStatus(StatusData.Error("test description")))
+        val status = span.status
+        assert(status is StatusData.Error)
+        assertEquals("test description", (status as StatusData.Error).description)
     }
-
-    // TODO: Write tests to check setSpanStatus for [Throwable]
 
     @Test
     fun `setAttributes on Span writes all attributes`() {
@@ -44,13 +40,13 @@ class SpanExtTest {
 
         val actualAttributes = span.collectedAttributes
         val expectedAttributes = mapOf(
-            AttributeKey.stringKey("keyString") to "valueString",
-            AttributeKey.longKey("keyInt") to 1L,
-            AttributeKey.booleanKey("keyBoolean") to true
+            "keyString" to "valueString",
+            "keyInt" to 1L,
+            "keyBoolean" to true
         )
 
         assertEquals(expectedAttributes.size, actualAttributes.size)
-        assertMapsEqual(expectedAttributes, actualAttributes)
+        assertEquals(expectedAttributes, actualAttributes)
     }
 
     @Test
@@ -66,13 +62,13 @@ class SpanExtTest {
         val actualEvents = span.collectedEvents
         assertEquals(1, actualEvents.size)
 
-        val actualEventAttributes = actualEvents.values.first().asMap()
+        val actualEventAttributes = actualEvents[0].attributes
         val expectedEvents = mapOf(
-            AttributeKey.stringKey("keyString") to "valueString",
-            AttributeKey.longKey("keyInt") to 1L,
+            "keyString" to "valueString",
+            "keyInt" to 1L,
         )
 
         assertEquals(expectedEvents.size, actualEventAttributes.size)
-        assertMapsEqual(expectedEvents, actualEventAttributes)
+        assertEquals(expectedEvents, actualEventAttributes)
     }
 }

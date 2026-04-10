@@ -3,8 +3,7 @@ package ai.koog.agents.features.opentelemetry
 import ai.koog.agents.features.opentelemetry.attribute.KoogAttributes
 import ai.koog.agents.features.opentelemetry.attribute.SpanAttributes
 import ai.koog.agents.features.opentelemetry.attribute.SpanAttributes.Operation.OperationNameType
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.sdk.trace.data.SpanData
+import io.opentelemetry.kotlin.tracing.data.SpanData
 
 internal data class OpenTelemetryTestData(
     var result: String? = null,
@@ -13,7 +12,7 @@ internal data class OpenTelemetryTestData(
 
     val runIds: List<String>
         get() = collectedSpans.mapNotNull { span ->
-            span.attributes[AttributeKey.stringKey("gen_ai.conversation.id")]
+            span.attributes["gen_ai.conversation.id"] as? String
         }.distinct()
 
     val lastRunId: String
@@ -46,154 +45,127 @@ internal data class OpenTelemetryTestData(
 
     fun filterCreateAgentEventIds(agentId: String): List<String> {
         val operationNameAttribute = SpanAttributes.Operation.Name(OperationNameType.CREATE_AGENT)
-        val expectedOperationNameKey = AttributeKey.stringKey(operationNameAttribute.key)
-
         val agentIdAttribute = SpanAttributes.Agent.Id(agentId)
-        val expectedAgentIdAttributeKey = AttributeKey.stringKey(agentIdAttribute.key)
-
         val eventIdAttribute = KoogAttributes.Koog.Event.Id("")
-        val expectedEventIdKey = AttributeKey.stringKey(eventIdAttribute.key)
 
         return collectedSpans.filter { span ->
-            val attributeValue = span.attributes.get(expectedOperationNameKey)
-            val agentIdValue = span.attributes.get(expectedAgentIdAttributeKey)
+            val attributeValue = span.attributes[operationNameAttribute.key]
+            val agentIdValue = span.attributes[agentIdAttribute.key]
 
             attributeValue != null &&
                 attributeValue == operationNameAttribute.value &&
                 agentIdValue != null &&
                 agentIdValue == agentIdAttribute.value
         }
-            .mapNotNull { span -> span.attributes?.get(expectedEventIdKey) }
+            .mapNotNull { span -> span.attributes[eventIdAttribute.key] as? String }
     }
 
     fun filterStrategyEventIds(strategyName: String): List<String> {
         val strategyAttribute = KoogAttributes.Koog.Strategy.Name(strategyName)
-        val expectedStrategyNameKey = AttributeKey.stringKey(strategyAttribute.key)
-
         val eventIdAttribute = KoogAttributes.Koog.Event.Id("")
-        val expectedEventIdKey = AttributeKey.stringKey(eventIdAttribute.key)
 
         return collectedSpans.filter { span ->
-            val attributeValue = span.attributes.get(expectedStrategyNameKey)
+            val attributeValue = span.attributes[strategyAttribute.key]
             attributeValue != null && attributeValue == strategyAttribute.value
         }
-            .mapNotNull { span -> span.attributes?.get(expectedEventIdKey) }
+            .mapNotNull { span -> span.attributes[eventIdAttribute.key] as? String }
     }
 
     fun filterNodeEventIdsByNodeId(nodeId: String): List<String> {
         val nodeAttribute = KoogAttributes.Koog.Node.Id(nodeId)
         val eventIdAttribute = KoogAttributes.Koog.Event.Id("")
 
-        val expectedNodeKey = AttributeKey.stringKey(nodeAttribute.key)
-        val expectedEventIdKey = AttributeKey.stringKey(eventIdAttribute.key)
-
         return collectedSpans.filter { span ->
-            val nodeIdAttribute = span.attributes.get(expectedNodeKey)
+            val nodeIdAttribute = span.attributes[nodeAttribute.key]
             nodeIdAttribute != null && nodeIdAttribute == nodeAttribute.value
-        }.mapNotNull { span -> span.attributes?.get(expectedEventIdKey) }
+        }.mapNotNull { span -> span.attributes[eventIdAttribute.key] as? String }
     }
 
     fun filterSubgraphEventIdBySubgraphId(subgraphId: String): List<String> {
         val subgraphAttribute = KoogAttributes.Koog.Subgraph.Id(subgraphId)
-        val expectedSubgraphKey = AttributeKey.stringKey(subgraphAttribute.key)
-
         val eventIdAttribute = KoogAttributes.Koog.Event.Id("")
-        val expectedEventIdKey = AttributeKey.stringKey(eventIdAttribute.key)
 
         return collectedSpans.filter { span ->
-            val subgraphIdAttribute = span.attributes.get(expectedSubgraphKey)
+            val subgraphIdAttribute = span.attributes[subgraphAttribute.key]
             subgraphIdAttribute != null && subgraphIdAttribute == subgraphAttribute.value
-        }.mapNotNull { span -> span.attributes?.get(expectedEventIdKey) }
+        }.mapNotNull { span -> span.attributes[eventIdAttribute.key] as? String }
     }
 
     fun filterToolCallEventIdByToolName(toolName: String): List<String> {
         val toolNameAttribute = SpanAttributes.Tool.Name(toolName)
-        val expectedToolNameKey = AttributeKey.stringKey(toolNameAttribute.key)
-
         val eventIdAttribute = KoogAttributes.Koog.Event.Id("")
-        val expectedEventIdKey = AttributeKey.stringKey(eventIdAttribute.key)
 
         return collectedSpans.filter { span ->
-            val attributeValue = span.attributes.get(expectedToolNameKey)
+            val attributeValue = span.attributes[toolNameAttribute.key]
             attributeValue != null && attributeValue == toolNameAttribute.value
         }
-            .mapNotNull { span -> span.attributes?.get(expectedEventIdKey) }
+            .mapNotNull { span -> span.attributes[eventIdAttribute.key] as? String }
     }
 
     fun filterInferenceEventIds(): List<String> {
         val operationNameAttribute = SpanAttributes.Operation.Name(OperationNameType.CHAT)
-        val expectedOperationNameKey = AttributeKey.stringKey(operationNameAttribute.key)
-
         val eventIdAttribute = KoogAttributes.Koog.Event.Id("")
-        val expectedEventIdKey = AttributeKey.stringKey(eventIdAttribute.key)
 
         return collectedSpans.filter { span ->
-            val attributeValue = span.attributes.get(expectedOperationNameKey)
+            val attributeValue = span.attributes[operationNameAttribute.key]
             attributeValue != null && attributeValue == operationNameAttribute.value
         }
-            .mapNotNull { span -> span.attributes?.get(expectedEventIdKey) }
+            .mapNotNull { span -> span.attributes[eventIdAttribute.key] as? String }
     }
 
     fun singleAttributeValue(spanData: SpanData, key: String): String? {
-        return spanData.attributes?.asMap()?.mapKeys { it.key.key }[key]?.toString()
+        return spanData.attributes[key]?.toString()
     }
 
     fun filterCreateAgentSpans(): List<SpanData> {
         val createAgentAttribute = SpanAttributes.Operation.Name(OperationNameType.CREATE_AGENT)
-        val attributeKey = AttributeKey.stringKey(createAgentAttribute.key)
 
         return collectedSpans.filter { spanData ->
-            spanData.attributes.get(attributeKey) == createAgentAttribute.value
+            spanData.attributes[createAgentAttribute.key] == createAgentAttribute.value
         }
     }
 
     fun filterAgentInvokeSpans(): List<SpanData> {
         val invokeAgentAttribute = SpanAttributes.Operation.Name(OperationNameType.INVOKE_AGENT)
-        val attributeKey = AttributeKey.stringKey(invokeAgentAttribute.key)
 
         return collectedSpans.filter { spanData ->
-            spanData.attributes.get(attributeKey) == invokeAgentAttribute.value
+            spanData.attributes[invokeAgentAttribute.key] == invokeAgentAttribute.value
         }
     }
 
     fun filterStrategySpans(): List<SpanData> {
         val strategyAttribute = KoogAttributes.Koog.Strategy.Name("")
-        val attributeKey = AttributeKey.stringKey(strategyAttribute.key)
 
         return collectedSpans.filter { spanData ->
-            spanData.attributes.get(attributeKey) != null
+            spanData.attributes[strategyAttribute.key] != null
         }
     }
 
     fun filterInferenceSpans(): List<SpanData> {
         val chatAttribute = SpanAttributes.Operation.Name(OperationNameType.CHAT)
-        val attributeKey = AttributeKey.stringKey(chatAttribute.key)
 
         return collectedSpans.filter { spanData ->
-            spanData.attributes.get(attributeKey) == chatAttribute.value
+            spanData.attributes[chatAttribute.key] == chatAttribute.value
         }
     }
 
     fun filterExecuteToolSpans(): List<SpanData> {
         val executeToolOperationAttribute = SpanAttributes.Operation.Name(OperationNameType.EXECUTE_TOOL)
-        val attributeKey = AttributeKey.stringKey(executeToolOperationAttribute.key)
 
         return collectedSpans.filter { spanData ->
-            spanData.attributes.get(attributeKey) == executeToolOperationAttribute.value
+            spanData.attributes[executeToolOperationAttribute.key] == executeToolOperationAttribute.value
         }
     }
 
     fun filterNodeExecutionSpans(): List<SpanData> {
         val nodeAttribute = KoogAttributes.Koog.Node.Id("")
-        val expectedNodeKey = AttributeKey.stringKey(nodeAttribute.key)
 
-        return collectedSpans.filter { spanData -> spanData.attributes.get(expectedNodeKey) != null }
+        return collectedSpans.filter { spanData -> spanData.attributes[nodeAttribute.key] != null }
     }
 
     fun filterSubgraphExecutionSpans(): List<SpanData> {
         val subgraphAttribute = KoogAttributes.Koog.Subgraph.Id("")
-        val expectedSubgraphKey = AttributeKey.stringKey(subgraphAttribute.key)
 
-        return collectedSpans.filter { spanData -> spanData.attributes.get(expectedSubgraphKey) != null }
+        return collectedSpans.filter { spanData -> spanData.attributes[subgraphAttribute.key] != null }
     }
 }

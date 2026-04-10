@@ -4,75 +4,61 @@ import ai.koog.agents.annotations.JavaAPI
 import ai.koog.agents.core.feature.config.FeatureConfig
 import ai.koog.agents.core.feature.handler.AgentLifecycleEventContext
 import ai.koog.agents.features.opentelemetry.attribute.CustomAttribute
-import ai.koog.agents.features.opentelemetry.attribute.addAttributes
 import ai.koog.agents.features.opentelemetry.integration.SpanAdapter
 import ai.koog.agents.features.opentelemetry.integration.langfuse.addLangfuseExporterImpl
 import ai.koog.agents.features.opentelemetry.integration.weave.addWeaveExporterImpl
+import ai.koog.agents.features.opentelemetry.platform.PlatformInfo
+import ai.koog.agents.features.opentelemetry.platform.loadProductProperties
+import ai.koog.agents.features.opentelemetry.platform.registerShutdownHook
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.api.trace.Tracer
-import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
-import io.opentelemetry.context.propagation.ContextPropagators
-import io.opentelemetry.exporter.logging.LoggingSpanExporter
-import io.opentelemetry.sdk.OpenTelemetrySdk
-import io.opentelemetry.sdk.resources.Resource
-import io.opentelemetry.sdk.trace.SdkTracerProvider
-import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder
-import io.opentelemetry.sdk.trace.SpanProcessor
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
-import io.opentelemetry.sdk.trace.export.SpanExporter
-import io.opentelemetry.sdk.trace.samplers.Sampler
+import io.opentelemetry.kotlin.OpenTelemetry
+import io.opentelemetry.kotlin.createOpenTelemetry
+import io.opentelemetry.kotlin.factory.ContextFactory
+import io.opentelemetry.kotlin.tracing.Tracer
+import io.opentelemetry.kotlin.tracing.export.SpanExporter
+import io.opentelemetry.kotlin.tracing.export.compositeSpanExporter
+import io.opentelemetry.kotlin.tracing.export.simpleSpanProcessor
+import io.opentelemetry.kotlin.tracing.export.stdoutSpanExporter
+import io.opentelemetry.kotlin.tracing.export.toOtelKotlinSpanExporter
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import java.util.Properties
 import kotlin.time.toKotlinDuration
 import java.time.Duration as JavaDuration
 
 /**
  * Configuration class for OpenTelemetry integration.
  *
- * Provides seamless integration with the OpenTelemetry SDK, allowing initialization
- * and customization of various components such as the tracer, meter, exporters, etc.
+ * Provides seamless integration with the OpenTelemetry Kotlin SDK, allowing initialization
+ * and customization of various components such as the tracer, exporters, etc.
+ *
+ * Uses the Kotlin Multiplatform OpenTelemetry SDK's `createOpenTelemetry { }` DSL for
+ * native configuration. For OTLP exporters (Langfuse, Weave), Java SDK exporters are
+ * wrapped via compat bridge.
  */
 public class OpenTelemetryConfig : FeatureConfig() {
 
     private companion object {
 
         private val logger = KotlinLogging.logger { }
-
-        private val osName = System.getProperty("os.name")
-
-        private val osVersion = System.getProperty("os.version")
-
-        private val osArch = System.getProperty("os.arch")
     }
 
-    private val productProperties = run {
-        val props = Properties()
-        this::class.java.classLoader.getResourceAsStream("product.properties")?.use { stream ->
-            props.load(stream)
-        }
-        props
-    }
+    private val productProperties = loadProductProperties()
 
     private val customSpanExporters = mutableListOf<SpanExporter>()
 
-    private val customSpanProcessorsCreator = mutableListOf<(SpanExporter) -> SpanProcessor>()
+    private val customResourceAttributes = mutableMapOf<String, Any>()
 
-    private val customResourceAttributes = mutableMapOf<AttributeKey<*>, Any>()
+    private var _sdk: OpenTelemetry? = null
 
-    private var _sdk: OpenTelemetrySdk? = null
+    private var _serviceName: String = productProperties["name"] ?: "ai.koog"
 
-    private var _serviceName: String = productProperties.getProperty("name") ?: "ai.koog"
-
-    private var _serviceVersion: String = productProperties.getProperty("version") ?: "0.0.0"
+    private var _serviceVersion: String = productProperties["version"] ?: "0.0.0"
 
     private var _instrumentationScopeName: String = _serviceName
 
     private var _instrumentationScopeVersion: String = _serviceVersion
 
-    private var _sampler: Sampler? = null
+    // TODO: KG-785 — Restore setSampler() when Kotlin SDK adds sampler support to TracerProviderConfigDsl
 
     private var _verbose: Boolean = false
 
@@ -98,33 +84,26 @@ public class OpenTelemetryConfig : FeatureConfig() {
         get() = _verbose
 
     /**
-     * Provides an instance of the `OpenTelemetrySdk`.
-     *
-     * This property retrieves the existing instance of the SDK if it has already been initialized. If the SDK has not
-     * been initialized, it initializes a new instance with the specified service name and service version.
-     * The initialized SDK instance is cached for future access.
-     *
-     * The `initializeOpenTelemetry` function configures the SDK with the appropriate service attributes, trace
-     * providers, span processors, and exporters. It also ensures proper shutdown of the SDK on application termination.
-     *
-     * @return The initialized or previously cached `OpenTelemetrySdk`.
-     */
-    public val sdk: OpenTelemetrySdk
-        get() {
-            return _sdk ?: initializeOpenTelemetry().also { sdk ->
-                _sdk = sdk
-
-                // Set the instrumentation scope name only once when SDK is created
-                _instrumentationScopeName = _serviceName
-                _instrumentationScopeVersion = _serviceVersion
-            }
-        }
-
-    /**
      * Provides access to the `Tracer` instance for tracking and recording tracing data.
+     * Returns a Kotlin Multiplatform OpenTelemetry SDK Tracer.
      */
     public val tracer: Tracer
-        get() = sdk.getTracer(_instrumentationScopeName, _instrumentationScopeVersion)
+        get() = sdk.tracerProvider.getTracer(_instrumentationScopeName, _instrumentationScopeVersion)
+
+    /**
+     * Provides access to the `ContextFactory` for managing span context.
+     */
+    internal val contextFactory: ContextFactory
+        get() = sdk.context
+
+    private val sdk: OpenTelemetry
+        get() = _sdk ?: initializeOpenTelemetry().also { sdk ->
+            _sdk = sdk
+
+            // Set the instrumentation scope name only once when SDK is created
+            _instrumentationScopeName = _serviceName
+            _instrumentationScopeVersion = _serviceVersion
+        }
 
     /**
      * The name of the service associated with this OpenTelemetry configuration.
@@ -154,8 +133,7 @@ public class OpenTelemetryConfig : FeatureConfig() {
     }
 
     /**
-     * Adds a SpanExporter to the OpenTelemetry configuration. This exporter will
-     * be used to export spans collected during the application's execution.
+     * Adds a Kotlin SDK SpanExporter to the OpenTelemetry configuration.
      *
      * @param exporter The SpanExporter instance to be added to the list of custom span exporters.
      */
@@ -164,38 +142,41 @@ public class OpenTelemetryConfig : FeatureConfig() {
     }
 
     /**
-     * Adds a [SpanProcessor] creator function to the OpenTelemetry configuration.
+     * Adds a Java SDK SpanExporter to the OpenTelemetry configuration.
+     * The exporter is automatically converted to the Kotlin SDK type via the compat bridge.
      *
-     * @param processor A function that takes a SpanExporter and returns the [SpanProcessor].
-     *                        This allows defining custom logic for processing spans before they are exported.
+     * This overload accepts Java OpenTelemetry SDK exporters such as `OtlpGrpcSpanExporter`,
+     * `OtlpHttpSpanExporter`, or `LoggingSpanExporter` directly, without requiring manual
+     * `.toOtelKotlinSpanExporter()` conversion.
+     *
+     * @param exporter The Java SDK SpanExporter instance.
      */
-    public fun addSpanProcessor(processor: (SpanExporter) -> SpanProcessor) {
-        customSpanProcessorsCreator.add(processor)
+    public fun addSpanExporter(exporter: io.opentelemetry.sdk.trace.export.SpanExporter) {
+        customSpanExporters.add(exporter.toOtelKotlinSpanExporter())
     }
+
+    // TODO: KG-785 — Restore addSpanProcessor() when Kotlin SDK exposes processor factories outside DSL scope.
+    //  Currently simpleSpanProcessor/batchSpanProcessor are TraceExportConfigDsl extensions and cannot be
+    //  called outside the export { } block. Internally we use simpleSpanProcessor as default.
 
     /**
      * Adds resource attributes to the OpenTelemetry configuration.
      * Resource attributes are key-value pairs that provide metadata
      * describing the entity producing telemetry data.
      *
-     * @param attributes A map where the keys are of type [AttributeKey]
-     *                   and the values are of type T. These attributes
-     *                   will be added to the resource.
-     * @param T The type of the values in the attribute map, which must be non-null.
+     * @param attributes A map where the keys are attribute names and the values
+     *                   are the attribute values. Supported types: String, Long, Double, Boolean.
      */
-    public fun <T> addResourceAttributes(attributes: Map<AttributeKey<T>, T>) where T : Any {
+    public fun addResourceAttributes(attributes: Map<String, Any>) {
         customResourceAttributes.putAll(attributes)
     }
 
-    /**
-     * Sets the sampler to be used by the OpenTelemetry configuration.
-     * The sampler determines which spans are sampled and exported during application execution.
-     *
-     * @param sampler The sampler instance to set for the OpenTelemetry configuration.
-     */
-    public fun setSampler(sampler: Sampler) {
-        _sampler = sampler
-    }
+    // TODO: KG-785 — Restore setSampler() when Kotlin SDK adds sampler support to TracerProviderConfigDsl.
+    //  The Kotlin SDK v0.2.0 defines a Sampler interface but does not wire it into the DSL.
+
+    // TODO: KG-785 — Restore setSdk() when Kotlin SDK provides an equivalent injection mechanism.
+    //  The current Kotlin SDK's createOpenTelemetry { } DSL does not support injecting
+    //  a pre-configured SDK instance.
 
     /**
      * Controls whether verbose telemetry data should be captured during application execution.
@@ -206,23 +187,6 @@ public class OpenTelemetryConfig : FeatureConfig() {
      */
     public fun setVerbose(verbose: Boolean) {
         _verbose = verbose
-    }
-
-    /**
-     *  Manually sets the [OpenTelemetrySdk] instance.
-     *
-     * This method allows injection of a pre-configured [OpenTelemetrySdk].
-     * When the SDK is set through this method, it also updates the instrumentation scope name and version
-     * based on the current service information.
-     *
-     * > Note: When using this method, any custom configuration applied via
-     * > [addSpanExporter], [addSpanProcessor], [addResourceAttributes] or [setSampler]
-     * > will be ignored, since the provided SDK is assumed to be fully configured.
-     *
-     * @param sdk The [OpenTelemetrySdk] instance to use for OpenTelemetry configuration.
-     */
-    public fun setSdk(sdk: OpenTelemetrySdk) {
-        _sdk = sdk
     }
 
     /**
@@ -239,84 +203,53 @@ public class OpenTelemetryConfig : FeatureConfig() {
 
     //region Private Methods
 
-    private fun initializeOpenTelemetry(): OpenTelemetrySdk {
-        // SDK
-        val builder = OpenTelemetrySdk.builder()
+    private fun initializeOpenTelemetry(): OpenTelemetry {
+        val resourceMap = buildResourceMap()
+        val preConfiguredExporters = customSpanExporters.toList()
 
-        // Tracing
-        val sampler = createSampler()
-        val resource = createResources()
-        val exporters: List<SpanExporter> = createExporters()
+        val sdk = createOpenTelemetry {
+            tracerProvider {
+                resource(resourceMap)
+                export {
+                    val exporters = if (preConfiguredExporters.isEmpty()) {
+                        logger.debug { "No custom span exporters configured. Using stdout span exporter by default." }
+                        listOf(stdoutSpanExporter())
+                    } else {
+                        preConfiguredExporters.also { list ->
+                            list.forEach { exporter ->
+                                logger.debug { "Adding span exporter: ${exporter::class.simpleName}" }
+                            }
+                        }
+                    }
 
-        val traceProviderBuilder = SdkTracerProvider.builder()
-            .setSampler(sampler)
-            .setResource(resource)
+                    val compositeExporter = if (exporters.size == 1) {
+                        exporters.first()
+                    } else {
+                        compositeSpanExporter(*exporters.toTypedArray())
+                    }
 
-        exporters.forEach { exporter: SpanExporter ->
-            traceProviderBuilder.addProcessors(exporter)
+                    simpleSpanProcessor(compositeExporter)
+                }
+            }
         }
 
-        val sdk = builder
-            .setTracerProvider(traceProviderBuilder.build())
-            .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
-            .build()
-
-        // Add a hook to close SDK, which flushes logs
-        Runtime.getRuntime().addShutdownHook(Thread { sdk.close() })
+        registerShutdownHook {
+            logger.debug { "Shutting down OpenTelemetry SDK" }
+        }
 
         return sdk
     }
 
-    private fun createSampler(): Sampler {
-        return _sampler ?: Sampler.alwaysOn()
-    }
+    private fun buildResourceMap(): Map<String, Any> = buildMap {
+        put("service.name", _serviceName)
+        put("service.version", _serviceVersion)
+        put("service.instance.time", DateTimeFormatter.ISO_INSTANT.format(Instant.now()))
 
-    private fun createResources(): Resource {
-        val defaultResourceAttributes: Map<AttributeKey<*>, String> = buildMap {
-            put(AttributeKey.stringKey("service.name"), _serviceName)
-            put(AttributeKey.stringKey("service.version"), _serviceVersion)
-            put(AttributeKey.stringKey("service.instance.time"), DateTimeFormatter.ISO_INSTANT.format(Instant.now()))
+        PlatformInfo.osName?.let { put("os.type", it) }
+        PlatformInfo.osVersion?.let { put("os.version", it) }
+        PlatformInfo.osArch?.let { put("os.arch", it) }
 
-            osName?.let { osName -> put(AttributeKey.stringKey("os.type"), osName) }
-            osVersion?.let { osVersion -> put(AttributeKey.stringKey("os.version"), osVersion) }
-            osArch?.let { osArch -> put(AttributeKey.stringKey("os.arch"), osArch) }
-        }
-
-        val resourceAttributes = Attributes.builder()
-            .addAttributes(defaultResourceAttributes)
-            .addAttributes(customResourceAttributes)
-            .build()
-
-        val resource = Resource.create(resourceAttributes)
-        return resource
-    }
-
-    private fun createExporters(): List<SpanExporter> = buildList {
-        if (customSpanExporters.isEmpty()) {
-            logger.debug { "No custom span exporters configured. Use log span exporter by default." }
-            add(LoggingSpanExporter.create())
-        }
-
-        customSpanExporters.forEach { exporter ->
-            logger.debug { "Adding span exporter: ${exporter::class.simpleName}" }
-            add(exporter)
-        }
-    }
-
-    private fun SdkTracerProviderBuilder.addProcessors(exporter: SpanExporter) {
-        if (customSpanProcessorsCreator.isEmpty()) {
-            logger.debug {
-                "No custom span processors configured. Use batch span processor with ${exporter::class.simpleName} as an exporter."
-            }
-            addSpanProcessor(SimpleSpanProcessor.builder(exporter).build())
-            return
-        }
-
-        customSpanProcessorsCreator.forEach { processorCreator ->
-            val spanProcessor = processorCreator(exporter)
-            logger.debug { "Adding span processor: ${spanProcessor::class.simpleName}" }
-            addSpanProcessor(spanProcessor)
-        }
+        putAll(customResourceAttributes)
     }
 
     //endregion Private Methods
@@ -329,8 +262,8 @@ public class OpenTelemetryConfig : FeatureConfig() {
      * @param langfuseUrl the base URL of the Langfuse instance.
      *        If not a set is retrieved from `LANGFUSE_HOST` environment variable.
      *        Defaults to [https://cloud.langfuse.com](https://cloud.langfuse.com).
-     * @param langfusePublicKey if not set is retrieved from `LANGFUSE_PUBLIC_KEY` environment variable.
-     * @param langfuseSecretKey if not set is retrieved from `LANGFUSE_SECRET_KEY` environment variable.
+     * @param langfusePublicKey if not set, is retrieved from `LANGFUSE_PUBLIC_KEY` environment variable.
+     * @param langfuseSecretKey if not set, is retrieved from `LANGFUSE_SECRET_KEY` environment variable.
      * @param timeout OpenTelemetry SpanExporter timeout.
      *        See [io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporterBuilder.setTimeout].
      * @param traceAttributes list of trace-level Langfuse attributes.
@@ -360,15 +293,15 @@ public class OpenTelemetryConfig : FeatureConfig() {
      * Configure an OpenTelemetry span exporter that sends data to [W&B Weave](https://wandb.ai/site/weave/).
      *
      * @param weaveOtelBaseUrl the URL of the Weave OpenTelemetry endpoint.
-     *        If not set is retrieved from `WEAVE_URL` environment variable.
+     *        If not set, is retrieved from `WEAVE_URL` environment variable.
      *        Defaults to [https://trace.wandb.ai](https://trace.wandb.ai).
      * @param weaveEntity can be found by visiting your W&B dashboard at [https://wandb.ai/home](https://wandb.ai/home) and
      *        checking the *Teams* field in the left sidebar.
-     *        If not set is retrieved from `WEAVE_ENTITY` environment variable.
+     *        If not set, is retrieved from `WEAVE_ENTITY` environment variable.
      * @param weaveProjectName name of your Weave project.
-     *        If not set is retrieved from `WEAVE_PROJECT_NAME` environment variable.
+     *        If not set, is retrieved from `WEAVE_PROJECT_NAME` environment variable.
      * @param weaveApiKey can be created on the [https://wandb.ai/authorize](https://wandb.ai/authorize) page.
-     *        If not set is retrieved from `WEAVE_API_KEY` environment variable.
+     *        If not set, is retrieved from `WEAVE_API_KEY` environment variable.
      * @param timeout OpenTelemetry SpanExporter timeout.
      *        See [io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporterBuilder.setTimeout].
      *

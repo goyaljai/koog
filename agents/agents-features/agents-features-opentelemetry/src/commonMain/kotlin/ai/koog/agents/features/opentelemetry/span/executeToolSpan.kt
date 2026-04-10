@@ -5,8 +5,10 @@ import ai.koog.agents.features.opentelemetry.attribute.CommonAttributes
 import ai.koog.agents.features.opentelemetry.attribute.KoogAttributes
 import ai.koog.agents.features.opentelemetry.attribute.SpanAttributes
 import ai.koog.agents.features.opentelemetry.extension.toSpanEndStatus
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.api.trace.Tracer
+import ai.koog.agents.features.opentelemetry.platform.errorTypeName
+import io.opentelemetry.kotlin.factory.ContextFactory
+import io.opentelemetry.kotlin.tracing.Tracer
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
@@ -28,6 +30,7 @@ import kotlinx.serialization.json.JsonObject
  */
 internal fun startExecuteToolSpan(
     tracer: Tracer,
+    contextFactory: ContextFactory,
     parentSpan: GenAIAgentSpan?,
     id: String,
     toolName: String,
@@ -66,7 +69,7 @@ internal fun startExecuteToolSpan(
 
     builder.addAttribute(KoogAttributes.Koog.Event.Id(id))
 
-    return builder.buildAndStart(tracer)
+    return builder.buildAndStart(tracer, contextFactory)
 }
 
 /**
@@ -90,8 +93,10 @@ internal fun endExecuteToolSpan(
     }
 
     // error.type
-    error?.javaClass?.typeName?.let { typeName ->
-        span.addAttribute(CommonAttributes.Error.Type(typeName))
+    error?.let { e ->
+        errorTypeName(e)?.let { typeName ->
+            span.addAttribute(CommonAttributes.Error.Type(typeName))
+        }
     }
 
     // gen_ai.tool.call.result

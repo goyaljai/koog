@@ -22,7 +22,6 @@ import ai.koog.agents.features.opentelemetry.event.SystemMessageEvent
 import ai.koog.agents.features.opentelemetry.event.ToolMessageEvent
 import ai.koog.agents.features.opentelemetry.event.UserMessageEvent
 import ai.koog.agents.features.opentelemetry.integration.SpanAdapter
-import ai.koog.agents.features.opentelemetry.integration.mcp.McpMethod
 import ai.koog.agents.features.opentelemetry.span.GenAIAgentSpan
 import ai.koog.agents.features.opentelemetry.span.SpanCollector
 import ai.koog.agents.features.opentelemetry.span.SpanType
@@ -84,6 +83,7 @@ public class OpenTelemetry {
             val spanCollector = SpanCollector()
             val spanAdapter = config.spanAdapter
             val tracer = config.tracer
+            val contextFactory = config.contextFactory
 
             installCommon(config, pipeline, spanCollector)
 
@@ -104,6 +104,7 @@ public class OpenTelemetry {
 
                 val nodeExecuteSpan = startNodeExecuteSpan(
                     tracer = tracer,
+                    contextFactory = contextFactory,
                     parentSpan = parentSpan,
                     id = eventContext.eventId,
                     runId = eventContext.context.runId,
@@ -183,6 +184,7 @@ public class OpenTelemetry {
 
                 val subgraphExecuteSpan = startSubgraphExecuteSpan(
                     tracer = tracer,
+                    contextFactory = contextFactory,
                     parentSpan = parentSpan,
                     id = eventContext.eventId,
                     runId = eventContext.context.runId,
@@ -284,6 +286,7 @@ public class OpenTelemetry {
         ) {
             val spanAdapter = config.spanAdapter
             val tracer = config.tracer
+            val contextFactory = config.contextFactory
 
             //region Agent
 
@@ -296,6 +299,7 @@ public class OpenTelemetry {
                 // Create CreateAgentSpan
                 val createAgentSpan = startCreateAgentSpan(
                     tracer = tracer,
+                    contextFactory = contextFactory,
                     parentSpan = null,
                     id = eventContext.eventId,
                     model = eventContext.agent.agentConfig.model,
@@ -312,6 +316,7 @@ public class OpenTelemetry {
                 // Create InvokeAgentSpan
                 val invokeAgentSpan = startInvokeAgentSpan(
                     tracer = tracer,
+                    contextFactory = contextFactory,
                     parentSpan = createAgentSpan,
                     id = eventContext.runId,
                     model = eventContext.agent.agentConfig.model,
@@ -440,6 +445,7 @@ public class OpenTelemetry {
 
                 val strategySpan = startStrategySpan(
                     tracer = tracer,
+                    contextFactory = contextFactory,
                     parentSpan = parentSpan,
                     id = eventContext.eventId,
                     runId = eventContext.context.runId,
@@ -490,6 +496,7 @@ public class OpenTelemetry {
 
                 val inferenceSpan = startInferenceSpan(
                     tracer = tracer,
+                    contextFactory = contextFactory,
                     parentSpan = parentSpan,
                     id = eventContext.eventId,
                     provider = eventContext.model.provider,
@@ -627,6 +634,7 @@ public class OpenTelemetry {
 
                 val executeToolSpan = startExecuteToolSpan(
                     tracer = tracer,
+                    contextFactory = contextFactory,
                     parentSpan = parentSpan,
                     id = eventContext.eventId,
                     toolName = eventContext.toolName,
@@ -642,7 +650,7 @@ public class OpenTelemetry {
                         executeToolSpan.enrichExecuteToolSpanWithMcpAttrs(
                             toolName = eventContext.toolName,
                             sessionId = mcpToolMetadata[McpMetadataKeys.McpSessionId],
-                            method = McpMethod.TOOLS_CALL,
+                            methodName = "tools/call",
                             serverPort = mcpToolMetadata[McpMetadataKeys.ServerPort]?.toIntOrNull(),
                             serverAddress = mcpToolMetadata[McpMetadataKeys.ServerUrl],
                             mcpProtocolVersion = mcpVersion,

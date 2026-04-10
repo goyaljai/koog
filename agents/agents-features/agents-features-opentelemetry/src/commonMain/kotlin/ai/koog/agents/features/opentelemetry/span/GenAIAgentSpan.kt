@@ -6,9 +6,9 @@ import ai.koog.agents.features.opentelemetry.extension.setAttributes
 import ai.koog.agents.features.opentelemetry.extension.setEvents
 import ai.koog.agents.features.opentelemetry.extension.setSpanStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.opentelemetry.api.trace.Span
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.context.Context
+import io.opentelemetry.kotlin.context.Context
+import io.opentelemetry.kotlin.tracing.model.Span
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 
 /**
  * Represents an abstract base class for a GenAI agent span in a trace.
@@ -50,7 +50,7 @@ internal class GenAIAgentSpan(
         get() = _events
 
     val logString: String
-        get() = "${this.javaClass.simpleName} (name: $name, id: $id)"
+        get() = "${this::class.simpleName ?: "GenAIAgentSpan"} (name: $name, id: $id)"
 
     fun addAttribute(attribute: Attribute) {
         logger.debug { "$logString Adding attribute to the span: ${attribute.key}" }

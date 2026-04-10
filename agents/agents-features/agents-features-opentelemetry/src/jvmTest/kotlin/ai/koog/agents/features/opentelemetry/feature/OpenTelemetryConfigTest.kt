@@ -27,15 +27,18 @@ import ai.koog.agents.features.opentelemetry.span.GenAIAgentSpan
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.RequestMetaInfo
 import ai.koog.utils.io.use
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.sdk.OpenTelemetrySdk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.util.Properties
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Tests for the OpenTelemetry feature.
@@ -118,37 +121,26 @@ class OpenTelemetryConfigTest : OpenTelemetryTestBase() {
         )
     }
 
-    @ParameterizedTest
-    @EnumSource(AgentType::class)
-    fun `test install Open Telemetry feature with custom sdk, should use provided sdk`(agentType: AgentType) = runTest {
-        val expectedSdk = OpenTelemetrySdk.builder().build()
-        var actualSdk: OpenTelemetrySdk? = null
-
-        createAgent(
-            strategy = getSimpleStrategy(agentType),
-        ) {
-            setSdk(expectedSdk)
-            actualSdk = sdk
-        }
-
-        assertEquals(expectedSdk, actualSdk)
-    }
+    // NOTE: setSdk() and createCustomSdk() tests removed — Kotlin SDK v0.2.0 does not support
+    // injecting a pre-configured SDK instance. See TODO in OpenTelemetryConfig.kt.
 
     @ParameterizedTest
     @EnumSource(AgentType::class)
-    fun `test custom sdk configuration emits correct spans`(agentType: AgentType) = runTest {
+    fun `test custom exporter configuration emits correct spans`(agentType: AgentType) = runTest {
         MockSpanExporter().use { mockExporter ->
-
-            val expectedSdk = createCustomSdk(mockExporter)
 
             val agent = createAgent(
                 strategy = getSingleLLMCallStrategy(agentType),
                 executor = defaultMockExecutor,
             ) {
-                setSdk(expectedSdk)
+                addSpanExporter(mockExporter)
             }
 
             agent.run(USER_PROMPT_PARIS, null)
+            // Wait for async span exports (Kotlin SDK exports on Dispatchers.Default)
+            withContext(Dispatchers.Default) {
+                withTimeoutOrNull(5.seconds) { mockExporter.isCollected.first { it } }
+            }
             val actualSpanNames = mockExporter.collectedSpans.map { it.name }
             agent.close()
 
@@ -171,10 +163,7 @@ class OpenTelemetryConfigTest : OpenTelemetryTestBase() {
                 )
             }
 
-            assertEquals(expectedSpanNames.size, actualSpanNames.size)
-            expectedSpanNames.zip(actualSpanNames).forEach { (expectedSpanName, actualSpanName) ->
-                assertEquals(expectedSpanName, actualSpanName)
-            }
+            assertEquals(expectedSpanNames.sorted(), actualSpanNames.sorted())
         }
     }
 
@@ -215,29 +204,27 @@ class OpenTelemetryConfigTest : OpenTelemetryTestBase() {
                 agent.run("", null)
             }
 
+            // Wait for async span exports (Kotlin SDK exports on Dispatchers.Default)
+            withContext(Dispatchers.Default) {
+                withTimeoutOrNull(5.seconds) { mockExporter.isCollected.first { it } }
+            }
+
             val collectedSpans = mockExporter.collectedSpans
             assertTrue(collectedSpans.isNotEmpty(), "Spans should be created during agent execution")
 
             val conversationIdAttribute = SpanAttributes.Conversation.Id(mockExporter.lastRunId)
             val operationNameAttribute = SpanAttributes.Operation.Name(OperationNameType.INVOKE_AGENT)
 
-            fun attributesMatches(attributes: Map<AttributeKey<*>, Any>): Boolean {
-                var conversationIdAttributeExists = false
-                var operationNameAttributeExists = false
-                attributes.forEach { (key, value) ->
-                    if (key.key == conversationIdAttribute.key && value == conversationIdAttribute.value) {
-                        conversationIdAttributeExists = true
-                    }
-
-                    if (key.key == operationNameAttribute.key && value == operationNameAttribute.value) {
-                        operationNameAttributeExists = true
-                    }
-                }
+            fun attributesMatches(attributes: Map<String, Any>): Boolean {
+                val conversationIdAttributeExists =
+                    attributes[conversationIdAttribute.key] == conversationIdAttribute.value
+                val operationNameAttributeExists =
+                    attributes[operationNameAttribute.key] == operationNameAttribute.value
                 return conversationIdAttributeExists && operationNameAttributeExists
             }
 
             val actualInvokeAgentSpans = collectedSpans.filter { span ->
-                attributesMatches(span.attributes.asMap())
+                attributesMatches(span.attributes)
             }
 
             assertEquals(1, actualInvokeAgentSpans.size, "Invoke agent span should be present")

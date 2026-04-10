@@ -1,7 +1,7 @@
 package ai.koog.agents.features.opentelemetry
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.opentelemetry.sdk.trace.data.SpanData
+import io.opentelemetry.kotlin.tracing.data.SpanData
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -34,37 +34,46 @@ internal fun assertMapsEqual(expected: Map<*, *>, actual: Map<*, *>, message: St
  */
 @Suppress("UNCHECKED_CAST")
 internal fun assertSpans(expectedSpans: List<Map<String, Map<String, Any>>>, actualSpans: List<SpanData>) {
-    // Span names
-    val expectedSpanNames = expectedSpans.flatMap { it.keys }
-    val actualSpanNames = actualSpans.map { it.name }
+    // The Kotlin OTel SDK exports spans asynchronously, so ordering is non-deterministic.
+    // Match expected and actual spans by koog.event.id (unique per span) rather than by position.
+    val expectedSpanNames = expectedSpans.flatMap { it.keys }.sorted()
+    val actualSpanNames = actualSpans.map { it.name }.sorted()
 
     assertSpanNames(expectedSpanNames, actualSpanNames)
 
-    // Span attributes + events
-    actualSpans.forEachIndexed { index, actualSpan ->
+    // Build a mutable list of unmatched actual spans
+    val remainingActual = actualSpans.toMutableList()
 
-        val expectedSpan = expectedSpans[index]
+    expectedSpans.forEach { expectedSpan ->
+        val expectedName = expectedSpan.keys.first()
+        val expectedSpanData = expectedSpan[expectedName]!!
+        val expectedAttributes = expectedSpanData["attributes"] as Map<String, Any>
+        val expectedEventId = expectedAttributes["koog.event.id"]
 
-        val expectedSpanData = expectedSpan[actualSpan.name]
-        assertNotNull(expectedSpanData, "Span (name: ${actualSpan.name}) not found in expected spans")
+        // Find matching actual span: same name + same koog.event.id (if present)
+        val matchIndex = if (expectedEventId != null) {
+            remainingActual.indexOfFirst {
+                it.name == expectedName && it.attributes["koog.event.id"] == expectedEventId
+            }
+        } else {
+            remainingActual.indexOfFirst { it.name == expectedName }
+        }
 
+        assertTrue(
+            matchIndex >= 0,
+            "No matching actual span found for expected span '$expectedName' with event.id=$expectedEventId"
+        )
+
+        val actualSpan = remainingActual.removeAt(matchIndex)
         val spanName = actualSpan.name
 
         // Attributes
-        val expectedAttributes = expectedSpanData["attributes"] as Map<String, Any>
-        val actualAttributes = actualSpan.attributes.asMap().asSequence().associate {
-            it.key.key to it.value
-        }
-
-        assertAttributes(spanName, expectedAttributes, actualAttributes)
+        assertAttributes(spanName, expectedAttributes, actualSpan.attributes)
 
         // Events
         val expectedEvents = expectedSpanData["events"] as Map<String, Map<String, Any>>
         val actualEvents = actualSpan.events.associate { event ->
-            val actualEventAttributes = event.attributes.asMap().asSequence().associate { (key, value) ->
-                key.key to value
-            }
-            event.name to actualEventAttributes
+            event.name to event.attributes
         }
 
         assertEventsForSpan(spanName, expectedEvents, actualEvents)

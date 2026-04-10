@@ -45,9 +45,13 @@ import ai.koog.prompt.message.RequestMetaInfo
 import ai.koog.prompt.tokenizer.SimpleRegexBasedTokenizer
 import ai.koog.serialization.kotlinx.KotlinxSerializer
 import ai.koog.utils.io.use
-import io.opentelemetry.sdk.trace.data.SpanData
-import io.opentelemetry.sdk.trace.export.SpanExporter
+import io.opentelemetry.kotlin.tracing.data.SpanData
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -57,6 +61,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 
 abstract class TraceStructureTestBase(private val openTelemetryConfigurator: OpenTelemetryConfig.() -> Unit) {
     private val json = Json { allowStructuredMapKeys = true }
@@ -494,16 +499,17 @@ abstract class TraceStructureTestBase(private val openTelemetryConfigurator: Ope
             }
 
             agent.run(userPrompt)
+            waitSpansCollected(mockExporter)
 
             val spans = mockExporter.collectedSpans
             assertTrue(spans.isNotEmpty(), "Spans should be created during agent execution")
             agent.close()
 
             val nodeSpan = spans.first { it.name == "node test-llm-call" }
-            val nodeAttrs = nodeSpan.attributes.asMap().asSequence().associate { it.key.key to it.value }
+            val nodeAttrs = nodeSpan.attributes
             assertEquals("value-start", nodeAttrs["custom.after.start"])
             val llmSpan = spans.first { it.name == "${SpanAttributes.Operation.OperationNameType.CHAT.id} ${model.id}" }
-            val llmAttrs = llmSpan.attributes.asMap().asSequence().associate { it.key.key to it.value }
+            val llmAttrs = llmSpan.attributes
 
             assertEquals(123L, llmAttrs["custom.before.finish"])
 
@@ -836,14 +842,14 @@ abstract class TraceStructureTestBase(private val openTelemetryConfigurator: Ope
             val moderationEvent = llmSpan.events.firstOrNull { it.name == "moderation.result" }
             assertNotNull(moderationEvent, "LLM span should contain a moderation.result event")
 
-            val eventAttrs = moderationEvent.attributes.asMap().map { (k, v) -> k.key to v }.toMap()
+            val eventAttrs = moderationEvent.attributes
 
             val expectedContent = json.encodeToString(ModerationResult.serializer(), moderationResult)
 
             assertEquals(expectedContent, eventAttrs["content"])
             assertEquals(OpenAIModels.Moderation.Omni.provider.id, eventAttrs["gen_ai.system"])
 
-            val llmAttrs = llmSpan.attributes.asMap().map { (k, v) -> k.key to v }.toMap()
+            val llmAttrs = llmSpan.attributes
             assertEquals(expectedContent, llmAttrs["gen_ai.completion.0.content"])
         }
     }
@@ -885,11 +891,10 @@ abstract class TraceStructureTestBase(private val openTelemetryConfigurator: Ope
             assertTrue(spans.any { it.name == "node embeddings-call" })
 
             val embeddingsSpan = spans.firstOrNull { span ->
-                val attrs = span.attributes.asMap().asSequence().associate { it.key.key to it.value }
-                attrs["gen_ai.operation.name"] == "embeddings"
+                span.attributes["gen_ai.operation.name"] == "embeddings"
             } ?: error("No embeddings span found (expected a span with gen_ai.operation.name = 'embeddings')")
 
-            val attrs = embeddingsSpan.attributes.asMap().asSequence().associate { it.key.key to it.value }
+            val attrs = embeddingsSpan.attributes
 
             assertEquals(model.provider.id, attrs["gen_ai.system"], "gen_ai.system should match provider id")
             assertEquals("embeddings", attrs["gen_ai.operation.name"], "operation should be embeddings")
@@ -912,11 +917,15 @@ abstract class TraceStructureTestBase(private val openTelemetryConfigurator: Ope
      * Gets an attribute value from a span by key.
      */
     private inline fun <reified T> getAttributeValue(spanData: SpanData, key: String): T? {
-        return spanData.attributes?.asMap()?.mapKeys { it.key.key }?.get(key) as? T
+        return spanData.attributes[key] as? T
     }
 
     /**
-     * Runs an agent with the given strategy and verifies the spans.
+     * Runs an agent with the given strategy and waits for spans to be collected.
+     *
+     * Note: The Kotlin OTel SDK's SimpleSpanProcessor exports spans asynchronously
+     * on Dispatchers.Default. We must wait for the MockSpanExporter to signal
+     * that spans have been collected before returning.
      */
     private suspend fun runAgentWithStrategy(
         strategy: AIAgentGraphStrategy<String, String>,
@@ -927,7 +936,7 @@ abstract class TraceStructureTestBase(private val openTelemetryConfigurator: Ope
         model: LLModel? = null,
         temperature: Double? = null,
         maxTokens: Int? = null,
-        spanExporter: SpanExporter? = null,
+        spanExporter: MockSpanExporter? = null,
         verbose: Boolean = true
     ) {
         val agentId = "test-agent-id"
@@ -950,6 +959,30 @@ abstract class TraceStructureTestBase(private val openTelemetryConfigurator: Ope
         }.use { agent ->
             agent.run(userPrompt ?: "User prompt message")
         }
+
+        // Wait for async span exports to complete (Kotlin SDK exports on Dispatchers.Default)
+        if (spanExporter != null) {
+            waitSpansCollected(spanExporter)
+        }
+    }
+
+    /**
+     * Waits for spans to be collected by the mock exporter within a timeout.
+     * Uses Dispatchers.Default because runTest overrides the scheduler.
+     *
+     * Note: The Kotlin OTel SDK's SimpleSpanProcessor exports each span via a separate
+     * coroutine on Dispatchers.Default. The CreateAgent span (root) ends last, but
+     * child span exports may still be in flight. A brief yield after the signal
+     * allows remaining export coroutines to complete.
+     */
+    private suspend fun waitSpansCollected(mockExporter: MockSpanExporter) = withContext(Dispatchers.Default) {
+        val timeout = 5.seconds
+        val isCollected = withTimeoutOrNull(timeout) {
+            mockExporter.isCollected.first { it }
+        } != null
+        assertTrue(isCollected, "Spans were not collected within $timeout")
+        // Allow remaining async span exports to complete
+        delay(200)
     }
 
     //endregion Private Methods

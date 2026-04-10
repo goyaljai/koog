@@ -1,113 +1,172 @@
 package ai.koog.agents.features.opentelemetry.mock
 
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.api.trace.Span
-import io.opentelemetry.api.trace.SpanContext
-import io.opentelemetry.api.trace.StatusCode
-import io.opentelemetry.context.Context
-import java.time.Instant
-import java.util.concurrent.TimeUnit
+import io.opentelemetry.kotlin.tracing.data.SpanEventData
+import io.opentelemetry.kotlin.tracing.data.SpanLinkData
+import io.opentelemetry.kotlin.tracing.data.StatusData
+import io.opentelemetry.kotlin.tracing.model.Span
+import io.opentelemetry.kotlin.tracing.model.SpanContext
+import io.opentelemetry.kotlin.tracing.model.SpanKind
+import io.opentelemetry.kotlin.tracing.model.TraceFlags
+import io.opentelemetry.kotlin.tracing.model.TraceState
 
 /**
- * A mock implementation of Open Telemetry Span for testing.
+ * A mock implementation of Kotlin OTel SDK Span for testing.
  */
-class MockSpan() : Span {
+class MockSpan(
+    override val spanKind: SpanKind = SpanKind.INTERNAL,
+    override val startTimestamp: Long = System.nanoTime(),
+) : Span {
 
     var isStarted = true
-
     var isEnded = false
 
-    var status: StatusCode? = null
+    override var name: String = ""
+    override var status: StatusData = StatusData.Unset
+    override val parent: SpanContext = MockSpanContext()
 
-    var statusDescription: String? = null
+    private val _spanContext = MockSpanContext()
+    override val spanContext: SpanContext get() = _spanContext
 
-    private val _collectedAttributes = mutableMapOf<AttributeKey<*>, Any?>()
+    private val _attributes = mutableMapOf<String, Any>()
+    override val attributes: Map<String, Any> get() = _attributes.toMap()
 
-    private val _collectedEvents = mutableMapOf<String, Attributes>()
+    private val _events = mutableListOf<MockSpanEventData>()
+    override val events: List<SpanEventData> get() = _events.toList()
 
-    val collectedAttributes: Map<AttributeKey<*>, Any?>
-        get() = _collectedAttributes.toMap()
+    override val links: List<SpanLinkData> = emptyList()
 
-    val collectedEvents: Map<String, Attributes>
-        get() = _collectedEvents.toMap()
+    // Collected data for test assertions
+    val collectedAttributes: Map<String, Any> get() = _attributes.toMap()
+    val collectedEvents: List<MockSpanEventData> get() = _events.toList()
 
-    override fun <T : Any?> setAttribute(key: AttributeKey<T?>, value: T?): Span {
-        _collectedAttributes[key] = value
-        return this
+    // AttributesMutator
+    override fun setBooleanAttribute(key: String, value: Boolean) {
+        _attributes[key] = value
     }
 
-    override fun setAttribute(key: String, value: String?): Span {
-        _collectedAttributes[AttributeKey.stringKey(key)] = value
-        return this
-    }
-    override fun setAttribute(key: String, value: Boolean): Span {
-        _collectedAttributes[AttributeKey.booleanKey(key)] = value
-        return this
+    override fun setStringAttribute(key: String, value: String) {
+        _attributes[key] = value
     }
 
-    override fun setAttribute(key: String, value: Long): Span {
-        _collectedAttributes[AttributeKey.longKey(key)] = value
-        return this
+    override fun setLongAttribute(key: String, value: Long) {
+        _attributes[key] = value
     }
 
-    override fun setAttribute(key: String, value: Double): Span {
-        _collectedAttributes[AttributeKey.doubleKey(key)] = value
-        return this
+    override fun setDoubleAttribute(key: String, value: Double) {
+        _attributes[key] = value
     }
 
-    override fun setAttribute(key: AttributeKey<Long>, value: Int): Span {
-        _collectedAttributes[key] = value
-        return this
+    override fun setBooleanListAttribute(key: String, value: List<Boolean>) {
+        _attributes[key] = value
     }
 
-    override fun addEvent(name: String, attributes: Attributes): Span {
-        _collectedEvents[name] = attributes
-        return this
+    override fun setStringListAttribute(key: String, value: List<String>) {
+        _attributes[key] = value
     }
 
-    override fun addEvent(name: String, attributes: Attributes, timestamp: Long, unit: TimeUnit): Span {
-        _collectedEvents[name] = attributes
-        return this
+    override fun setLongListAttribute(key: String, value: List<Long>) {
+        _attributes[key] = value
     }
 
-    override fun addEvent(name: String?): Span? {
-        return super.addEvent(name)
+    override fun setDoubleListAttribute(key: String, value: List<Double>) {
+        _attributes[key] = value
     }
 
-    override fun addEvent(name: String?, attributes: Attributes?, timestamp: Instant?): Span? {
-        return super.addEvent(name, attributes, timestamp)
+    // SpanEventCreator
+    override fun addEvent(name: String, timestamp: Long?, attributes: (io.opentelemetry.kotlin.attributes.AttributesMutator.() -> Unit)?) {
+        val eventAttrs = mutableMapOf<String, Any>()
+        val mutator = MockAttributesMutator(eventAttrs)
+        attributes?.invoke(mutator)
+        _events.add(MockSpanEventData(name, timestamp ?: System.nanoTime(), eventAttrs.toMap()))
     }
 
-    override fun addEvent(name: String?, timestamp: Instant?): Span? {
-        return super.addEvent(name, timestamp)
+    // SpanLinkCreator
+    override fun addLink(spanContext: SpanContext, attributes: (io.opentelemetry.kotlin.attributes.AttributesMutator.() -> Unit)?) {
+        // no-op for tests
     }
 
-    override fun addEvent(name: String?, timestamp: Long, unit: TimeUnit?): Span? {
-        return super.addEvent(name, timestamp, unit)
-    }
-
-    override fun setStatus(statusCode: StatusCode, description: String): Span {
-        status = statusCode
-        statusDescription = description
-        return this
-    }
-
-    override fun recordException(exception: Throwable, additionalAttributes: Attributes): Span = this
-
-    override fun updateName(name: String): Span = this
-
+    // Span lifecycle
     override fun end() {
         isEnded = true
     }
 
-    override fun end(timestamp: Long, unit: TimeUnit) {
+    override fun end(timestamp: Long) {
         isEnded = true
     }
 
-    override fun getSpanContext(): SpanContext = SpanContext.getInvalid()
-
     override fun isRecording(): Boolean = isStarted && !isEnded
+}
 
-    override fun storeInContext(context: Context): Context = context
+/**
+ * Mock SpanContext for testing.
+ */
+class MockSpanContext : SpanContext {
+    override val traceId: String = "00000000000000000000000000000000"
+    override val traceIdBytes: ByteArray = ByteArray(16)
+    override val spanId: String = "0000000000000000"
+    override val spanIdBytes: ByteArray = ByteArray(8)
+    override val traceFlags: TraceFlags = MockTraceFlags
+    override val isValid: Boolean = false
+    override val isRemote: Boolean = false
+    override val traceState: TraceState = MockTraceState
+}
+
+object MockTraceFlags : TraceFlags {
+    override val isSampled: Boolean = false
+    override val isRandom: Boolean = false
+}
+
+object MockTraceState : TraceState {
+    override fun get(key: String): String? = null
+    override fun asMap(): Map<String, String> = emptyMap()
+    override fun put(key: String, value: String): TraceState = this
+    override fun remove(key: String): TraceState = this
+}
+
+/**
+ * Mock SpanEventData for assertions.
+ */
+data class MockSpanEventData(
+    override val name: String,
+    override val timestamp: Long,
+    override val attributes: Map<String, Any>
+) : SpanEventData
+
+/**
+ * Mock AttributesMutator that collects attributes into a map.
+ */
+class MockAttributesMutator(
+    private val attrs: MutableMap<String, Any>
+) : io.opentelemetry.kotlin.attributes.AttributesMutator {
+    override fun setBooleanAttribute(key: String, value: Boolean) {
+        attrs[key] = value
+    }
+
+    override fun setStringAttribute(key: String, value: String) {
+        attrs[key] = value
+    }
+
+    override fun setLongAttribute(key: String, value: Long) {
+        attrs[key] = value
+    }
+
+    override fun setDoubleAttribute(key: String, value: Double) {
+        attrs[key] = value
+    }
+
+    override fun setBooleanListAttribute(key: String, value: List<Boolean>) {
+        attrs[key] = value
+    }
+
+    override fun setStringListAttribute(key: String, value: List<String>) {
+        attrs[key] = value
+    }
+
+    override fun setLongListAttribute(key: String, value: List<Long>) {
+        attrs[key] = value
+    }
+
+    override fun setDoubleListAttribute(key: String, value: List<Double>) {
+        attrs[key] = value
+    }
 }

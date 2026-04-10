@@ -1,25 +1,40 @@
 package ai.koog.agents.features.opentelemetry.mock
 
-import ai.koog.agents.features.opentelemetry.span.GenAIAgentSpan
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.common.Attributes
-import io.opentelemetry.api.trace.Span
-import io.opentelemetry.api.trace.SpanBuilder
-import io.opentelemetry.api.trace.SpanContext
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.api.trace.Tracer
-import io.opentelemetry.context.Context
-import java.util.concurrent.TimeUnit
+import io.opentelemetry.kotlin.attributes.AttributesMutator
+import io.opentelemetry.kotlin.context.Context
+import io.opentelemetry.kotlin.context.ContextKey
+import io.opentelemetry.kotlin.context.Scope
+import io.opentelemetry.kotlin.factory.ContextFactory
+import io.opentelemetry.kotlin.tracing.Tracer
+import io.opentelemetry.kotlin.tracing.model.Span
+import io.opentelemetry.kotlin.tracing.model.SpanContext
+import io.opentelemetry.kotlin.tracing.model.SpanCreationAction
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 
 /**
- * A mock implementation of the OpenTelemetry Tracer interface for testing.
- * This class creates MockSpanBuilder instances that can create MockSpan instances.
+ * A mock implementation of the Kotlin OTel SDK Tracer for testing.
  */
-class MockTracer() : Tracer {
+class MockTracer : Tracer {
     val createdSpans = mutableListOf<MockSpan>()
 
-    override fun spanBuilder(spanName: String): SpanBuilder {
-        return MockSpanBuilder(this)
+    override fun startSpan(
+        name: String,
+        parentContext: Context?,
+        spanKind: SpanKind,
+        startTimestamp: Long?,
+        action: (SpanCreationAction.() -> Unit)?
+    ): Span {
+        val mockSpan = MockSpan(spanKind = spanKind, startTimestamp = startTimestamp ?: System.nanoTime())
+        mockSpan.name = name
+
+        // Execute the creation action to collect attributes
+        if (action != null) {
+            val creationAction = MockSpanCreationAction(mockSpan)
+            action.invoke(creationAction)
+        }
+
+        createdSpans.add(mockSpan)
+        return mockSpan
     }
 
     fun clear() {
@@ -28,72 +43,59 @@ class MockTracer() : Tracer {
 }
 
 /**
- * A mock implementation of the OpenTelemetry SpanBuilder interface for testing.
- * This class creates MockSpan instances.
+ * Mock SpanCreationAction that delegates to MockSpan for attribute collection.
  */
-class MockSpanBuilder(
-    private val tracer: MockTracer
-) : SpanBuilder {
-    private var parent: GenAIAgentSpan? = null
-    private var startTimestamp: Long = System.currentTimeMillis()
-    private var startTimestampUnit: TimeUnit = TimeUnit.MILLISECONDS
-    private val attributes = mutableMapOf<String, Any?>()
+private class MockSpanCreationAction(
+    private val span: MockSpan
+) : SpanCreationAction {
+    override fun setBooleanAttribute(key: String, value: Boolean) = span.setBooleanAttribute(key, value)
+    override fun setStringAttribute(key: String, value: String) = span.setStringAttribute(key, value)
+    override fun setLongAttribute(key: String, value: Long) = span.setLongAttribute(key, value)
+    override fun setDoubleAttribute(key: String, value: Double) = span.setDoubleAttribute(key, value)
+    override fun setBooleanListAttribute(key: String, value: List<Boolean>) = span.setBooleanListAttribute(key, value)
+    override fun setStringListAttribute(key: String, value: List<String>) = span.setStringListAttribute(key, value)
+    override fun setLongListAttribute(key: String, value: List<Long>) = span.setLongListAttribute(key, value)
+    override fun setDoubleListAttribute(key: String, value: List<Double>) = span.setDoubleListAttribute(key, value)
+    override fun addLink(spanContext: SpanContext, attributes: (AttributesMutator.() -> Unit)?) {}
+    override fun addEvent(name: String, timestamp: Long?, attributes: (AttributesMutator.() -> Unit)?) {
+        span.addEvent(name, timestamp, attributes)
+    }
+}
 
-    override fun setParent(context: Context): SpanBuilder {
-        return this
+/**
+ * A mock implementation of the Kotlin OTel SDK ContextFactory for testing.
+ */
+class MockContextFactory : ContextFactory {
+    override fun root(): Context = MockContext()
+    override fun implicit(): Context = MockContext()
+    override fun storeSpan(context: Context, span: Span): Context = context
+}
+
+/**
+ * A mock implementation of Context for testing.
+ */
+class MockContext : Context {
+    private val values = mutableMapOf<String, Any?>()
+
+    override fun <T> createKey(name: String): ContextKey<T> = MockContextKey(name)
+
+    override fun <T> set(key: ContextKey<T>, value: T?): Context {
+        val newCtx = MockContext()
+        newCtx.values.putAll(values)
+        newCtx.values[(key as MockContextKey).name] = value
+        return newCtx
     }
 
-    override fun setNoParent(): SpanBuilder {
-        parent = null
-        return this
+    override fun <T> get(key: ContextKey<T>): T? {
+        @Suppress("UNCHECKED_CAST")
+        return values[(key as MockContextKey).name] as T?
     }
 
-    override fun addLink(spanContext: SpanContext): SpanBuilder {
-        return this
-    }
+    override fun attach(): Scope = MockScope
+}
 
-    override fun addLink(spanContext: SpanContext, attributes: Attributes): SpanBuilder {
-        return this
-    }
+private class MockContextKey<T>(val name: String) : ContextKey<T>
 
-    override fun setAttribute(key: String, value: String): SpanBuilder {
-        attributes[key] = value
-        return this
-    }
-
-    override fun setAttribute(key: String, value: Long): SpanBuilder {
-        attributes[key] = value
-        return this
-    }
-
-    override fun setAttribute(key: String, value: Double): SpanBuilder {
-        attributes[key] = value
-        return this
-    }
-
-    override fun setAttribute(key: String, value: Boolean): SpanBuilder {
-        attributes[key] = value
-        return this
-    }
-
-    override fun <T : Any?> setAttribute(key: AttributeKey<T?>, value: T & Any): SpanBuilder {
-        attributes[key.key] = value
-        return this
-    }
-
-    override fun setSpanKind(spanKind: SpanKind): SpanBuilder {
-        return this
-    }
-
-    override fun setStartTimestamp(startTimestamp: Long, unit: TimeUnit): SpanBuilder {
-        this.startTimestamp = startTimestamp
-        this.startTimestampUnit = unit
-        return this
-    }
-
-    override fun startSpan(): Span {
-        val mockSpan = MockSpan()
-        tracer.createdSpans.add(mockSpan)
-        return mockSpan
-    }
+private object MockScope : Scope {
+    override fun detach() {}
 }

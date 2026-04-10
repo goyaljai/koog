@@ -4,8 +4,10 @@ import ai.koog.agents.features.opentelemetry.attribute.CommonAttributes
 import ai.koog.agents.features.opentelemetry.attribute.KoogAttributes
 import ai.koog.agents.features.opentelemetry.attribute.SpanAttributes
 import ai.koog.agents.features.opentelemetry.extension.toSpanEndStatus
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.api.trace.Tracer
+import ai.koog.agents.features.opentelemetry.platform.errorTypeName
+import io.opentelemetry.kotlin.factory.ContextFactory
+import io.opentelemetry.kotlin.tracing.Tracer
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 
 /**
  * Build and start a new Strategy Span with necessary attributes.
@@ -23,6 +25,7 @@ import io.opentelemetry.api.trace.Tracer
  */
 internal fun startStrategySpan(
     tracer: Tracer,
+    contextFactory: ContextFactory,
     parentSpan: GenAIAgentSpan?,
     id: String,
     runId: String,
@@ -39,7 +42,7 @@ internal fun startStrategySpan(
         .addAttribute(KoogAttributes.Koog.Strategy.Name(strategyName))
         .addAttribute(KoogAttributes.Koog.Event.Id(id))
 
-    return builder.buildAndStart(tracer)
+    return builder.buildAndStart(tracer, contextFactory)
 }
 
 /**
@@ -62,8 +65,10 @@ internal fun endStrategySpan(
     }
 
     // error.type
-    error?.javaClass?.typeName?.let { typeName ->
-        span.addAttribute(CommonAttributes.Error.Type(typeName))
+    error?.let { e ->
+        errorTypeName(e)?.let { typeName ->
+            span.addAttribute(CommonAttributes.Error.Type(typeName))
+        }
     }
 
     span.end(error.toSpanEndStatus(), verbose)

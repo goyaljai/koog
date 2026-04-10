@@ -5,11 +5,13 @@ import ai.koog.agents.features.opentelemetry.attribute.CommonAttributes
 import ai.koog.agents.features.opentelemetry.attribute.KoogAttributes
 import ai.koog.agents.features.opentelemetry.attribute.SpanAttributes
 import ai.koog.agents.features.opentelemetry.extension.toSpanEndStatus
+import ai.koog.agents.features.opentelemetry.platform.errorTypeName
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.params.LLMParams
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.kotlin.factory.ContextFactory
+import io.opentelemetry.kotlin.tracing.Tracer
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 
 /**
  * Build and start a new Invoke Agent Span with necessary attributes.
@@ -46,6 +48,7 @@ import io.opentelemetry.api.trace.Tracer
  */
 internal fun startInvokeAgentSpan(
     tracer: Tracer,
+    contextFactory: ContextFactory,
     parentSpan: GenAIAgentSpan?,
     id: String,
     model: LLModel,
@@ -128,7 +131,7 @@ internal fun startInvokeAgentSpan(
 
     builder.addAttribute(KoogAttributes.Koog.Event.Id(id))
 
-    return builder.buildAndStart(tracer)
+    return builder.buildAndStart(tracer, contextFactory)
 }
 
 /**
@@ -158,8 +161,10 @@ internal fun endInvokeAgentSpan(
     }
 
     // error.type
-    error?.javaClass?.typeName?.let { typeName ->
-        span.addAttribute(CommonAttributes.Error.Type(typeName))
+    error?.let { e ->
+        errorTypeName(e)?.let { typeName ->
+            span.addAttribute(CommonAttributes.Error.Type(typeName))
+        }
     }
 
     // gen_ai.response.finish_reasons - Ignore. Not supported in Koog

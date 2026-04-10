@@ -1,13 +1,13 @@
 package ai.koog.agents.features.opentelemetry.span
 
 import ai.koog.agents.features.opentelemetry.attribute.Attribute
+import ai.koog.agents.features.opentelemetry.attribute.applyAttributes
 import ai.koog.agents.features.opentelemetry.event.GenAIAgentEvent
-import ai.koog.agents.features.opentelemetry.extension.setAttributes
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.api.trace.Tracer
-import io.opentelemetry.context.Context
-import java.time.Instant
+import io.opentelemetry.kotlin.context.Context
+import io.opentelemetry.kotlin.factory.ContextFactory
+import io.opentelemetry.kotlin.tracing.Tracer
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 
 internal class GenAIAgentSpanBuilder(
     private val spanType: SpanType,
@@ -15,7 +15,7 @@ internal class GenAIAgentSpanBuilder(
     private val id: String,
     private val name: String,
     private val kind: SpanKind,
-    private val instant: Instant? = null,
+    private val startTimestampNanos: Long? = null,
     private val verbose: Boolean = false,
 ) {
 
@@ -32,18 +32,19 @@ internal class GenAIAgentSpanBuilder(
         return this
     }
 
-    fun buildAndStart(tracer: Tracer): GenAIAgentSpan {
-        val parentContext = parentSpan?.context ?: Context.current()
+    fun buildAndStart(tracer: Tracer, contextFactory: ContextFactory): GenAIAgentSpan {
+        val parentContext: Context = parentSpan?.context ?: contextFactory.root()
 
-        val spanBuilder = tracer.spanBuilder(name)
-            .setStartTimestamp(instant ?: Instant.now())
-            .setSpanKind(kind)
-            .setParent(parentContext)
+        val startedSpan = tracer.startSpan(
+            name = name,
+            parentContext = parentContext,
+            spanKind = kind,
+            startTimestamp = startTimestampNanos,
+        ) {
+            applyAttributes(attributes, verbose)
+        }
 
-        spanBuilder.setAttributes(attributes, verbose)
-
-        val startedSpan = spanBuilder.startSpan()
-        val context = startedSpan.storeInContext(parentContext)
+        val context = contextFactory.storeSpan(parentContext, startedSpan)
 
         val genAiSpan = GenAIAgentSpan(
             parentSpan = parentSpan,
@@ -56,8 +57,6 @@ internal class GenAIAgentSpanBuilder(
             attributes = attributes.toList(),
             events = events.toList(),
         )
-
-        startedSpan
 
         logger.debug { "${genAiSpan.logString} Span has been started." }
 

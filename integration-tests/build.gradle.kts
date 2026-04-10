@@ -53,6 +53,7 @@ kotlin {
                 implementation(libs.aws.sdk.kotlin.bedrock)
                 implementation(libs.aws.sdk.kotlin.bedrockruntime)
                 implementation(libs.ktor.client.content.negotiation)
+                implementation(project.dependencies.platform(libs.opentelemetry.bom))
                 implementation(libs.opentelemetry.sdk.testing)
             }
         }

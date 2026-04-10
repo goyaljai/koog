@@ -68,11 +68,13 @@ public abstract class AIAgentBase<Input, Output, TContext : AIAgentContext> cons
      * @throws Throwable if any exception occurs during the execution process.
      */
     @OptIn(ExperimentalUuidApi::class)
-    override suspend fun run(agentInput: Input, sessionId: String?): Output {
+    override suspend fun run(agentInput: Input, sessionId: String?): AgentResult<Output, TContext> {
         val runId = sessionId ?: Uuid.random().toString()
         val session = AIAgentRunSessionImpl(runId, logger, this, strategy, pipeline, ::prepareContext)
-        return session.run(agentInput)
+        return AgentResult(session.run(agentInput), session.context())
     }
+
+    internal data class AgentResult<Output, TContext : AIAgentContext>(val output: Output, val context: TContext)
 
     /**
      * Closes the AI Agent and performs necessary cleanup operations.

@@ -1,13 +1,14 @@
 package ai.koog.agents.features.opentelemetry.mock
 
 import ai.koog.agents.features.opentelemetry.attribute.SpanAttributes
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.sdk.common.CompletableResultCode
-import io.opentelemetry.sdk.trace.data.SpanData
-import io.opentelemetry.sdk.trace.export.SpanExporter
+import ai.koog.utils.io.Closeable
+import io.opentelemetry.kotlin.export.OperationResultCode
+import io.opentelemetry.kotlin.tracing.data.SpanData
+import io.opentelemetry.kotlin.tracing.export.SpanExporter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * A mock span exporter that captures spans created by the OpenTelemetry feature.
@@ -15,14 +16,14 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * @param filter a function that determines whether a given span should be exported. Defaults to exporting all spans.
  */
-internal class MockSpanExporter : SpanExporter {
+internal class MockSpanExporter : SpanExporter, Closeable {
 
     companion object {
         private val createAgentSpanOperationAttribute =
             SpanAttributes.Operation.Name(SpanAttributes.Operation.OperationNameType.CREATE_AGENT)
     }
 
-    private val _collectedSpans = mutableListOf<SpanData>()
+    private val _collectedSpans = CopyOnWriteArrayList<SpanData>()
 
     val collectedSpans: List<SpanData>
         get() = _collectedSpans
@@ -30,7 +31,7 @@ internal class MockSpanExporter : SpanExporter {
     val runIds: List<String>
         get() {
             return collectedSpans.mapNotNull { span ->
-                span.attributes[AttributeKey.stringKey("gen_ai.conversation.id")]
+                span.attributes["gen_ai.conversation.id"] as? String
             }.distinct()
         }
 
@@ -42,14 +43,14 @@ internal class MockSpanExporter : SpanExporter {
     val isCollected: StateFlow<Boolean>
         get() = _isCollected.asStateFlow()
 
-    override fun export(spans: MutableCollection<SpanData>): CompletableResultCode {
-        spans.forEach { span ->
+    override suspend fun export(telemetry: List<SpanData>): OperationResultCode {
+        telemetry.forEach { span ->
             _collectedSpans.add(span)
 
-            val isCreateAgentSpan = span.attributes.asMap().any { (key, value) ->
+            val isCreateAgentSpan = span.attributes.any { (key, value) ->
                 // Note! This code will wait until the first CreateAgentSpan is collected.
                 //  If the test verifies multiple CreateAgentSpans, this check will give an unexpected result.
-                key.key == createAgentSpanOperationAttribute.key && value == createAgentSpanOperationAttribute.value
+                key == createAgentSpanOperationAttribute.key && value == createAgentSpanOperationAttribute.value
             }
 
             if (isCreateAgentSpan) {
@@ -57,14 +58,18 @@ internal class MockSpanExporter : SpanExporter {
             }
         }
 
-        return CompletableResultCode.ofSuccess()
+        return OperationResultCode.Success
     }
 
-    override fun flush(): CompletableResultCode {
-        return CompletableResultCode.ofSuccess()
+    override suspend fun forceFlush(): OperationResultCode {
+        return OperationResultCode.Success
     }
 
-    override fun shutdown(): CompletableResultCode {
-        return CompletableResultCode.ofSuccess()
+    override suspend fun shutdown(): OperationResultCode {
+        return OperationResultCode.Success
+    }
+
+    override suspend fun close() {
+        shutdown()
     }
 }

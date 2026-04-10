@@ -172,20 +172,15 @@ class OpenTelemetryExecuteToolSpanTest : OpenTelemetryTestBase() {
         val actualSpans = collectedTestData.filterExecuteToolSpans()
             .sortedBy { span ->
                 // Filter by tool attributes stored in the 'gen_ai.tool.call.arguments' span attribute
-                val inputValueAttributes = span.attributes.asMap().filter { entry -> entry.key.key == "gen_ai.tool.call.arguments" }
-                inputValueAttributes.values.singleOrNull().toString()
+                span.attributes["gen_ai.tool.call.arguments"]?.toString() ?: ""
             }
 
         assertTrue(actualSpans.isNotEmpty(), "Tool Call event ids should be collected during agent execution")
 
         // Extract event IDs from the sorted spans to match them in order
-        val eventIdFromLondonSpan = actualSpans[0].attributes.asMap()
-            .filter { entry -> entry.key.key == "koog.event.id" }
-            .values.singleOrNull().toString()
+        val eventIdFromLondonSpan = actualSpans[0].attributes["koog.event.id"]?.toString() ?: ""
 
-        val eventIdFromParisSpan = actualSpans[1].attributes.asMap()
-            .filter { entry -> entry.key.key == "koog.event.id" }
-            .values.singleOrNull().toString()
+        val eventIdFromParisSpan = actualSpans[1].attributes["koog.event.id"]?.toString() ?: ""
 
         val expectedSpans = listOf(
             mapOf(

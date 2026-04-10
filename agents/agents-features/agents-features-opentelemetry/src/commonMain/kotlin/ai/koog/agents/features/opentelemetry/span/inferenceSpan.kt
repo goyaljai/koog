@@ -5,12 +5,14 @@ import ai.koog.agents.features.opentelemetry.attribute.CommonAttributes
 import ai.koog.agents.features.opentelemetry.attribute.KoogAttributes
 import ai.koog.agents.features.opentelemetry.attribute.SpanAttributes
 import ai.koog.agents.features.opentelemetry.extension.toSpanEndStatus
+import ai.koog.agents.features.opentelemetry.platform.errorTypeName
 import ai.koog.prompt.llm.LLMProvider
 import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.params.LLMParams
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.kotlin.factory.ContextFactory
+import io.opentelemetry.kotlin.tracing.Tracer
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 
 /**
  * Build and start a new Inference Span with necessary attributes.
@@ -44,6 +46,7 @@ import io.opentelemetry.api.trace.Tracer
  */
 internal fun startInferenceSpan(
     tracer: Tracer,
+    contextFactory: ContextFactory,
     parentSpan: GenAIAgentSpan?,
     id: String,
     provider: LLMProvider,
@@ -83,9 +86,11 @@ internal fun startInferenceSpan(
     }
     // gen_ai.request.model
     builder.addAttribute(SpanAttributes.Request.Model(model))
+
     // gen_ai.request.seed - Ignore. Not supported in Koog
     // server.port - Ignore. Not supported in Koog
     // gen_ai.request.frequency_penalty - Ignore. Not supported in Koog
+
     // gen_ai.request.max_tokens
     llmParams.maxTokens?.let {
         builder.addAttribute(SpanAttributes.Request.MaxTokens(it))
@@ -93,6 +98,7 @@ internal fun startInferenceSpan(
 
     // gen_ai.request.presence_penalty - Ignore. Not supported in Koog
     // gen_ai.request.stop_sequences - Ignore. Not supported in Koog
+
     // gen_ai.request.temperature
     llmParams.temperature?.let {
         builder.addAttribute(SpanAttributes.Request.Temperature(it))
@@ -101,17 +107,16 @@ internal fun startInferenceSpan(
     // gen_ai.request.top_k - Ignore. Not supported in Koog
     // gen_ai.request.top_p - Ignore. Not supported in Koog
     // server.address - Ignore. Not supported in Koog
+
     // gen_ai.input.messages
     if (messages.isNotEmpty()) {
         builder.addAttribute(SpanAttributes.Input.Messages(messages))
     }
-
     // gen_ai.system_instructions
     val systemMessages = messages.filterIsInstance<Message.System>()
     if (systemMessages.isNotEmpty()) {
         builder.addAttribute(SpanAttributes.SystemInstructions(systemMessages))
     }
-
     // gen_ai.tool.definitions
     if (tools.isNotEmpty()) {
         builder.addAttribute(SpanAttributes.Tool.Definitions(tools))
@@ -119,7 +124,7 @@ internal fun startInferenceSpan(
 
     builder.addAttribute(KoogAttributes.Koog.Event.Id(id))
 
-    return builder.buildAndStart(tracer)
+    return builder.buildAndStart(tracer, contextFactory)
 }
 
 /**
@@ -149,12 +154,15 @@ internal fun endInferenceSpan(
     }
 
     // error.type
-    error?.javaClass?.typeName?.let { typeName ->
-        span.addAttribute(CommonAttributes.Error.Type(typeName))
+    error?.let { e ->
+        errorTypeName(e)?.let { typeName ->
+            span.addAttribute(CommonAttributes.Error.Type(typeName))
+        }
     }
 
     // gen_ai.response.finish_reasons - Ignore. Not supported in Koog
     // gen_ai.response.id - Ignore. Not supported in Koog
+
     // gen_ai.response.model
     span.addAttribute(SpanAttributes.Response.Model(model))
 

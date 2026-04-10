@@ -1,10 +1,8 @@
 package ai.koog.agents.features.opentelemetry.span
 
 import ai.koog.agents.core.agent.execution.AgentExecutionInfo
+import ai.koog.agents.features.opentelemetry.platform.RWLock
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.read
-import kotlin.concurrent.write
 
 internal class SpanCollector {
 
@@ -24,7 +22,7 @@ internal class SpanCollector {
     /**
      * A read-write lock to ensure thread-safe access to the span collections.
      */
-    private val spansLock = ReentrantReadWriteLock()
+    private val spansLock = RWLock()
 
     /**
      * Map of path string to a list of SpanNodes for O(1) lookups by execution path.
@@ -199,8 +197,8 @@ internal class SpanCollector {
             error(
                 "${span.logString} Error deleting span node from the tree (path: ${path.path()}). " +
                     "Node still have <${node.children.size}> child span(s). Spans:\n" +
-                    node.children.joinToString("\n") { node ->
-                        " - ${node.span.logString}, active: ${node.span.span.isRecording}"
+                    node.children.joinToString("\n") { childNode ->
+                        " - ${childNode.span.logString}, active: ${childNode.span.span.isRecording()}"
                     }
             )
         }
@@ -208,7 +206,7 @@ internal class SpanCollector {
         val pathString = node.path.path()
 
         // Remove from a path map
-        spanNodes.removeIf { it.span.id == span.id }
+        spanNodes.removeAll { it.span.id == span.id }
         if (spanNodes.isEmpty()) {
             pathToNodeMap.remove(pathString)
         }
@@ -216,7 +214,7 @@ internal class SpanCollector {
         // Remove from parent's children or from root nodes
         val parentPath = node.path.parent
         if (parentPath == null) {
-            rootNodes.removeIf { it.span.id == span.id }
+            rootNodes.removeAll { it.span.id == span.id }
             logger.debug { "Removed root span '${span.name}'" }
         } else {
             val parentNodes = pathToNodeMap[parentPath.path()]
@@ -225,7 +223,7 @@ internal class SpanCollector {
                     parentNodes.find { it.span.id == parentSpan.id }
                 } ?: parentNodes.singleOrNull()
 
-                parentNode?.children?.removeIf { it.span.id == span.id }
+                parentNode?.children?.removeAll { it.span.id == span.id }
                 logger.debug { "Removed child span '${span.name}' from parent '${parentPath.path()}'" }
             }
         }

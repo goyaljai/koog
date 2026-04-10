@@ -21,8 +21,6 @@ internal object McpAttributes {
         /**
          * The name of the request or notification method.
          * This is a REQUIRED attribute for all MCP operations.
-         *
-         * @see [ai.koog.agents.features.opentelemetry.integration.mcp.McpMethod]
          */
         sealed interface Method : Mcp {
             override val key: String

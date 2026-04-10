@@ -1,8 +1,14 @@
 package ai.koog.agents.features.opentelemetry.integration.weave
 
+// TODO: KG-785 — This file is JVM-only because it depends on Java OTel SDK's OtlpHttpSpanExporter
+//  for custom HTTP headers (Authorization, project_id) and endpoint configuration. The Kotlin
+//  Multiplatform OTel SDK (0.2.0) does not provide a native OTLP exporter yet. When it does,
+//  migrate this to commonMain to enable Weave support on all platforms.
+
 import ai.koog.agents.features.opentelemetry.feature.OpenTelemetryConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter
+import io.opentelemetry.kotlin.tracing.export.toOtelKotlinSpanExporter
 import java.util.Base64
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
@@ -33,6 +39,7 @@ internal fun OpenTelemetryConfig.addWeaveExporterImpl(
             .addHeader("project_id", "$entity/$projectName")
             .addHeader("Authorization", "Basic $auth")
             .build()
+            .toOtelKotlinSpanExporter()
     )
 
     addSpanAdapter(WeaveSpanAdapter(this))

@@ -3,13 +3,13 @@ package ai.koog.agents.features.opentelemetry.extension
 import ai.koog.agents.features.opentelemetry.attribute.CustomAttribute
 import ai.koog.agents.features.opentelemetry.attribute.GenAIAttribute
 import ai.koog.agents.features.opentelemetry.event.GenAIAgentEvent
+import ai.koog.agents.features.opentelemetry.mock.MockContext
 import ai.koog.agents.features.opentelemetry.mock.MockEventBodyField
 import ai.koog.agents.features.opentelemetry.mock.MockGenAIAgentEvent
 import ai.koog.agents.features.opentelemetry.mock.MockSpan
 import ai.koog.agents.features.opentelemetry.span.GenAIAgentSpan
 import ai.koog.agents.features.opentelemetry.span.SpanType
-import io.opentelemetry.api.trace.SpanKind
-import io.opentelemetry.context.Context
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -53,7 +53,7 @@ class GenAIAgentEventExtTest {
             id = "test-span-id",
             name = "test-span-name",
             span = MockSpan(),
-            context = Context.root(),
+            context = MockContext(),
             kind = SpanKind.INTERNAL,
             attributes = actualAttributes,
             events = actualEvents

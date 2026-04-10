@@ -1,15 +1,14 @@
 package ai.koog.agents.features.opentelemetry.span
 
 import ai.koog.agents.core.agent.execution.AgentExecutionInfo
-import ai.koog.agents.features.opentelemetry.assertMapsEqual
 import ai.koog.agents.features.opentelemetry.event.EventBodyFields
 import ai.koog.agents.features.opentelemetry.mock.MockAttribute
+import ai.koog.agents.features.opentelemetry.mock.MockContextFactory
 import ai.koog.agents.features.opentelemetry.mock.MockGenAIAgentEvent
 import ai.koog.agents.features.opentelemetry.mock.MockSpan
 import ai.koog.agents.features.opentelemetry.mock.MockTracer
 import ai.koog.agents.utils.HiddenString
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.trace.SpanKind
+import io.opentelemetry.kotlin.tracing.model.SpanKind
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -28,6 +27,7 @@ class SpanCollectorTest {
     fun `collectSpan should add span to processor`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
         val spanId = "test-span-id"
         val spanName = "test-span-name"
         val span = GenAIAgentSpanBuilder(
@@ -36,7 +36,7 @@ class SpanCollectorTest {
             id = spanId,
             name = spanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val executionInfo = AgentExecutionInfo(null, "test")
 
         spanCollector.collectSpan(span, executionInfo)
@@ -48,6 +48,7 @@ class SpanCollectorTest {
     fun `getSpan should return span by id when it exists`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
         val spanId = "test-span-id"
         val spanName = "test-span-name"
         val span = GenAIAgentSpanBuilder(
@@ -56,7 +57,7 @@ class SpanCollectorTest {
             id = spanId,
             name = spanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val executionInfo = AgentExecutionInfo(null, "test")
 
         spanCollector.collectSpan(span, executionInfo)
@@ -82,6 +83,7 @@ class SpanCollectorTest {
     fun `getSpan should return null when span with given id not found`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
 
         val spanId = "test-span-id"
         val spanName = "test-span-name"
@@ -91,7 +93,7 @@ class SpanCollectorTest {
             id = spanId,
             name = spanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
 
         val executionInfo = AgentExecutionInfo(null, "test")
 
@@ -109,6 +111,7 @@ class SpanCollectorTest {
     fun `removeSpan should decrease active span count`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
         val spanId = "test-span-id"
         val spanName = "test-span-name"
         val span = GenAIAgentSpanBuilder(
@@ -117,7 +120,7 @@ class SpanCollectorTest {
             id = spanId,
             name = spanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val executionInfo = AgentExecutionInfo(null, spanId)
         assertEquals(0, spanCollector.activeSpansCount)
 
@@ -134,6 +137,7 @@ class SpanCollectorTest {
     @Test
     fun `test mask HiddenString values in attributes when verbose set to false`() {
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
 
         val spanId = "test-span-id"
         val spanName = "test-span-name"
@@ -144,7 +148,7 @@ class SpanCollectorTest {
             id = spanId,
             name = spanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
 
         // Get the mock span instance
         val mockSpan = span.span as MockSpan
@@ -161,18 +165,19 @@ class SpanCollectorTest {
 
         // Verify exact converted values when verbose is set to 'false'
         val expectedAttributes = mapOf(
-            AttributeKey.stringKey("secretKey") to HiddenString.HIDDEN_STRING_PLACEHOLDER,
-            AttributeKey.stringArrayKey("arraySecretKey") to listOf(HiddenString.HIDDEN_STRING_PLACEHOLDER, HiddenString.HIDDEN_STRING_PLACEHOLDER),
-            AttributeKey.stringKey("regularKey") to "visible"
+            "secretKey" to HiddenString.HIDDEN_STRING_PLACEHOLDER,
+            "arraySecretKey" to listOf(HiddenString.HIDDEN_STRING_PLACEHOLDER, HiddenString.HIDDEN_STRING_PLACEHOLDER),
+            "regularKey" to "visible"
         )
 
         assertEquals(expectedAttributes.size, mockSpan.collectedAttributes.size)
-        assertMapsEqual(expectedAttributes, mockSpan.collectedAttributes)
+        assertEquals(expectedAttributes, mockSpan.collectedAttributes)
     }
 
     @Test
     fun `test mask HiddenString values in event attributes and body fields with verbose set to false`() {
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
 
         val spanId = "test-span-id"
         val spanName = "test-span-name"
@@ -183,7 +188,7 @@ class SpanCollectorTest {
             id = spanId,
             name = spanName,
             kind = SpanKind.CLIENT,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
 
         val spanEvent = MockGenAIAgentEvent(name = "event").apply {
             addAttribute(MockAttribute("secretKey", HiddenString("secretValue")))
@@ -199,22 +204,23 @@ class SpanCollectorTest {
         // Assert collected event
         val actualSpanEvents = (span.span as MockSpan).collectedEvents
         assertEquals(1, actualSpanEvents.size)
-        val actualEventAttributes = actualSpanEvents.getValue("event").asMap()
+        val actualEventAttributes = actualSpanEvents[0].attributes
 
         // Assert attributes for the collected event when the verbose flag is set to 'false'
         val expectedEventAttributes = mapOf(
-            AttributeKey.stringKey("secretKey") to HiddenString.HIDDEN_STRING_PLACEHOLDER,
-            AttributeKey.stringKey("content") to HiddenString.HIDDEN_STRING_PLACEHOLDER,
+            "secretKey" to HiddenString.HIDDEN_STRING_PLACEHOLDER,
+            "content" to HiddenString.HIDDEN_STRING_PLACEHOLDER,
         )
 
         assertEquals(expectedEventAttributes.size, actualEventAttributes.size)
-        assertMapsEqual(expectedEventAttributes, actualEventAttributes)
+        assertEquals(expectedEventAttributes, actualEventAttributes)
     }
 
     @Test
     fun `removeSpan should remove node from tree`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
         val spanId = "test-span-id"
         val spanName = "test-span-name"
         val span = GenAIAgentSpanBuilder(
@@ -223,7 +229,7 @@ class SpanCollectorTest {
             id = spanId,
             name = spanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val executionInfo = AgentExecutionInfo(null, spanId)
 
         spanCollector.collectSpan(span, executionInfo)
@@ -239,6 +245,7 @@ class SpanCollectorTest {
     fun `removeSpan should throw exception when span has active children`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
 
         // Create parent and child spans
         val parentSpanId = "parent-span"
@@ -249,7 +256,7 @@ class SpanCollectorTest {
             id = parentSpanId,
             name = parentSpanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val parentPath = AgentExecutionInfo(null, parentSpanId)
 
         val childSpanId = "child-span"
@@ -260,7 +267,7 @@ class SpanCollectorTest {
             id = childSpanId,
             name = childSpanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val childPath = AgentExecutionInfo(parentPath, childSpanId)
 
         // Start both spans
@@ -277,7 +284,7 @@ class SpanCollectorTest {
         val expectedError =
             "${parentSpan.logString} Error deleting span node from the tree (path: ${parentPath.path()}). " +
                 "Node still have <1> child span(s). Spans:\n" +
-                " - ${childSpan.logString}, active: ${childSpan.span.isRecording}"
+                " - ${childSpan.logString}, active: ${childSpan.span.isRecording()}"
 
         val actualError = exception.message
         assertNotNull(actualError)
@@ -290,6 +297,7 @@ class SpanCollectorTest {
     fun `removeSpan should succeed when child spans are ended first`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
 
         // Create parent and child spans
         val parentSpanId = "parent-span"
@@ -300,7 +308,7 @@ class SpanCollectorTest {
             id = parentSpanId,
             name = parentSpanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val parentPath = AgentExecutionInfo(null, parentSpanId)
 
         val childSpanId = "child-span"
@@ -311,7 +319,7 @@ class SpanCollectorTest {
             id = childSpanId,
             name = childSpanName,
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val childPath = AgentExecutionInfo(parentPath, childSpanId)
 
         // Start both spans
@@ -335,6 +343,7 @@ class SpanCollectorTest {
     fun `tree should maintain only active spans`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
 
         // Create a tree: parent -> child1, child2
         val parentSpanId = "parent"
@@ -344,7 +353,7 @@ class SpanCollectorTest {
             id = parentSpanId,
             name = "parent-span",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val parentPath = AgentExecutionInfo(null, parentSpanId)
 
         val child1SpanId = "child1"
@@ -354,7 +363,7 @@ class SpanCollectorTest {
             id = child1SpanId,
             name = "child1-span",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val child1Path = AgentExecutionInfo(parentPath, child1SpanId)
 
         val child2SpanId = "child2"
@@ -364,7 +373,7 @@ class SpanCollectorTest {
             id = child2SpanId,
             name = "child2-span",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val child2Path = AgentExecutionInfo(parentPath, child2SpanId)
 
         // Start all spans
@@ -398,6 +407,7 @@ class SpanCollectorTest {
     fun `removeSpan should handle multiple children properly`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
 
         // Create a tree: parent -> child1, child2, child3
         val parentSpanId = "parent"
@@ -407,7 +417,7 @@ class SpanCollectorTest {
             id = parentSpanId,
             name = "parent-span",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val parentPath = AgentExecutionInfo(null, parentSpanId)
 
         spanCollector.collectSpan(parentSpan, parentPath)
@@ -419,7 +429,7 @@ class SpanCollectorTest {
                 id = "child-id-1",
                 name = "child-span-1",
                 kind = SpanKind.INTERNAL,
-            ).buildAndStart(tracer),
+            ).buildAndStart(tracer, contextFactory),
             AgentExecutionInfo(parentPath, "child-id-1")
         )
 
@@ -430,7 +440,7 @@ class SpanCollectorTest {
                 id = "child-id-2",
                 name = "child-span-2",
                 kind = SpanKind.INTERNAL,
-            ).buildAndStart(tracer),
+            ).buildAndStart(tracer, contextFactory),
             AgentExecutionInfo(parentPath, "child-id-2")
         )
 
@@ -441,7 +451,7 @@ class SpanCollectorTest {
                 id = "child-id-3",
                 name = "child-span-3",
                 kind = SpanKind.INTERNAL,
-            ).buildAndStart(tracer),
+            ).buildAndStart(tracer, contextFactory),
             AgentExecutionInfo(parentPath, "child-id-3")
         )
 
@@ -461,9 +471,9 @@ class SpanCollectorTest {
         val expectedError =
             "${parentSpan.logString} Error deleting span node from the tree (path: ${parentPath.path()}). " +
                 "Node still have <3> child span(s). Spans:\n" +
-                " - ${childSpan1.first.logString}, active: ${childSpan1.first.span.isRecording}\n" +
-                " - ${childSpan2.first.logString}, active: ${childSpan2.first.span.isRecording}\n" +
-                " - ${childSpan3.first.logString}, active: ${childSpan3.first.span.isRecording}"
+                " - ${childSpan1.first.logString}, active: ${childSpan1.first.span.isRecording()}\n" +
+                " - ${childSpan2.first.logString}, active: ${childSpan2.first.span.isRecording()}\n" +
+                " - ${childSpan3.first.logString}, active: ${childSpan3.first.span.isRecording()}"
 
         val actualError = exception.message
         assertNotNull(actualError)
@@ -486,6 +496,7 @@ class SpanCollectorTest {
     fun `removeSpan should handle deep tree hierarchy`() {
         val spanCollector = SpanCollector()
         val tracer = MockTracer()
+        val contextFactory = MockContextFactory()
 
         // Create a deep tree: root -> level1 -> level2 -> level3
         val rootSpan = GenAIAgentSpanBuilder(
@@ -494,7 +505,7 @@ class SpanCollectorTest {
             id = "root",
             name = "root-span",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val rootPath = AgentExecutionInfo(null, "root")
 
         val level1Span = GenAIAgentSpanBuilder(
@@ -503,7 +514,7 @@ class SpanCollectorTest {
             id = "level1",
             name = "level1-span",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val level1Path = AgentExecutionInfo(rootPath, "level1")
 
         val level2Span = GenAIAgentSpanBuilder(
@@ -512,7 +523,7 @@ class SpanCollectorTest {
             id = "level2",
             name = "level2-span",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val level2Path = AgentExecutionInfo(level1Path, "level2")
 
         val level3Span = GenAIAgentSpanBuilder(
@@ -521,7 +532,7 @@ class SpanCollectorTest {
             id = "level3",
             name = "level3-span",
             kind = SpanKind.INTERNAL,
-        ).buildAndStart(tracer)
+        ).buildAndStart(tracer, contextFactory)
         val level3Path = AgentExecutionInfo(level2Path, "level3")
 
         // Start all spans
