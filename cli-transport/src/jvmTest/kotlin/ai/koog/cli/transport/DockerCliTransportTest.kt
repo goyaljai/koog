@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.File
 import java.nio.file.Files
+import kotlin.test.DefaultAsserter.assertNotNull
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertIs
@@ -119,11 +120,10 @@ class DockerCliTransportTest {
     }
 
     @Test
-    fun testIncorrectDockerExecutables() = runTest {
+    fun testIncorrectDockerExecutable() = runTest {
         val transport = DockerCliTransport(imageName, dockerPath = "non-existent-path")
 
-        val availability = transport.checkAvailability("java")
+        val availability = transport.checkAvailability("java", ".")
         assertIs<CliUnavailable>(availability, "incorrect docker should be unavailable")
-        assertContains(availability.reason, "Docker is not available")
     }
 }

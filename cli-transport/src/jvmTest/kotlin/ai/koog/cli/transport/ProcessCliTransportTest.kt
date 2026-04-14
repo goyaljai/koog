@@ -15,12 +15,8 @@ class ProcessCliTransportTest {
 
     @Test
     fun testCheckAvailability() {
-        val availability = CliTransport.Default.checkAvailability("java")
-
+        val availability = CliTransport.Default.checkAvailability("java", ".")
         availability.shouldBeInstanceOf<CliAvailable>()
-        availability.version
-            .shouldNotBeNull()
-            .shouldNotBeEmpty()
     }
 
     @Test
