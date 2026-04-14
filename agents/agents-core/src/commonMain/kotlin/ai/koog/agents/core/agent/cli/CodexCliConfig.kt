@@ -61,6 +61,15 @@ public enum class CodexApprovalPolicy(public val value: String) {
 
 /**
  * Configuration for Codex CLI agent.
+ *
+ * @param Input The type of input the agent accepts.
+ * @property transport The CLI transport used to execute commands.
+ * @property apiKey The Codex API key, or null to use the CODEX_API_KEY environment variable.
+ * @property sandbox The sandbox mode for Codex CLI execution.
+ * @property askForApproval The approval policy for command execution.
+ * @property additionalFlags Additional command-line flags to pass to Codex CLI.
+ * @property workspace The working directory for command execution.
+ * @property timeout The execution timeout duration.
  */
 public class CodexCliConfig<Input>(
     override val transport: CliTransport,

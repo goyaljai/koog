@@ -31,14 +31,32 @@ public abstract class ClaudeAgentBuilderBase<Input, Output, Self : ClaudeAgentBu
     clock,
     featureInstallers
 ) {
-    public fun apiKey(apiKey: String?): Self = self().apply {
+    /**
+     * Sets the API key for Claude.
+     *
+     * @param apiKey The Anthropic API key.
+     * @return This builder instance for chaining.
+     */
+    public fun apiKey(apiKey: String): Self = self().apply {
         this.apiKey = apiKey
     }
 
+    /**
+     * Sets the permission mode for Claude CLI.
+     *
+     * @param mode The permission mode to use during agent execution.
+     * @return This builder instance for chaining.
+     */
     public fun permissionMode(mode: ClaudePermissionMode): Self = self().apply {
         this.permissionMode = mode
     }
 
+    /**
+     * Sets additional command-line flags to pass to Claude CLI.
+     *
+     * @param flags List of additional flags.
+     * @return This builder instance for chaining.
+     */
     public fun additionalFlags(flags: List<String>): Self = self().apply {
         this.additionalFlags = flags
     }

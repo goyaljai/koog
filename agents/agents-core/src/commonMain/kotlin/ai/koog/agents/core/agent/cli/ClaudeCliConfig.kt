@@ -218,6 +218,16 @@ public object ClaudeCliHelper {
 
 /**
  * Configuration for Claude CLI agent with structured output.
+ *
+ * @param Input The type of input the agent accepts.
+ * @param Output The type of structured output the agent produces.
+ * @property transport The CLI transport used to execute commands.
+ * @property apiKey The Anthropic API key, or null to use the ANTHROPIC_API_KEY environment variable.
+ * @property structure The structure definition for parsing the output.
+ * @property permissionMode The permission mode for Claude CLI execution.
+ * @property additionalFlags Additional command-line flags to pass to Claude CLI.
+ * @property workspace The working directory for command execution.
+ * @property timeout The execution timeout duration.
  */
 public class ClaudeCliStructuredConfig<Input, Output>(
     override val transport: CliTransport,
@@ -244,6 +254,14 @@ public class ClaudeCliStructuredConfig<Input, Output>(
 
 /**
  * Configuration for Claude CLI agent.
+ *
+ * @param Input The type of input the agent accepts.
+ * @property transport The CLI transport used to execute commands.
+ * @property apiKey The Anthropic API key, or null to use the ANTHROPIC_API_KEY environment variable.
+ * @property permissionMode The permission mode for Claude CLI execution.
+ * @property additionalFlags Additional command-line flags to pass to Claude CLI.
+ * @property workspace The working directory for command execution.
+ * @property timeout The execution timeout duration.
  */
 public class ClaudeCliConfig<Input>(
     override val transport: CliTransport,

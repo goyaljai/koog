@@ -49,6 +49,11 @@ public class CodexAgentBuilder internal constructor(
         generateRequest = generateRequest
     )
 
+    /**
+     * Builds the Codex CLI agent.
+     *
+     * @return A configured [CliAIAgent] instance that accepts String input and produces [CliAIAgentResponse].
+     */
     public fun build(): CliAIAgent<String, CliAIAgentResponse> {
         val finalTransport = requireNotNull(this.transport) { "Transport is required" }
         return CliAIAgent.codex(
@@ -90,6 +95,11 @@ public class CodexAgentGenericInputBuilder<Input> internal constructor(
 ) {
     override fun self(): CodexAgentGenericInputBuilder<Input> = this
 
+    /**
+     * Builds the Codex CLI agent with custom input type.
+     *
+     * @return A configured [CliAIAgent] instance that accepts custom input and produces [CliAIAgentResponse].
+     */
     public fun build(): CliAIAgent<Input, CliAIAgentResponse> {
         val finalTransport = requireNotNull(this.transport) { "Transport is required" }
         return CliAIAgent.codex(

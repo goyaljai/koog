@@ -31,6 +31,13 @@ public abstract class ClaudeAgentBuilderCommon<Self : ClaudeAgentBuilderCommon<S
 ) : ClaudeAgentBuilderBase<String, CliAIAgentResponse, Self>(
     transport, systemPrompt, llModel, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
 ) {
+    /**
+     * Configures the agent to produce structured output using the specified output class.
+     *
+     * @param Output The type of the structured output.
+     * @param outputClass The Kotlin class representing the output structure.
+     * @return Builder for Claude CLI agent with structured output.
+     */
     @OptIn(InternalSerializationApi::class)
     public fun <Output : Any> structure(
         outputClass: KClass<Output>
@@ -38,6 +45,13 @@ public abstract class ClaudeAgentBuilderCommon<Self : ClaudeAgentBuilderCommon<S
         return structure(JsonStructure.create(serializer = outputClass.serializer()))
     }
 
+    /**
+     * Configures the agent to produce structured output using the specified structure definition.
+     *
+     * @param Output The type of the structured output.
+     * @param structure The structure definition for parsing the output.
+     * @return Builder for Claude CLI agent with structured output.
+     */
     public fun <Output> structure(
         structure: Structure<Output, LLMParams.Schema.JSON>
     ): ClaudeAgentStructuredOutputBuilder<Output> = ClaudeAgentStructuredOutputBuilder(
@@ -55,6 +69,13 @@ public abstract class ClaudeAgentBuilderCommon<Self : ClaudeAgentBuilderCommon<S
         structure = structure
     )
 
+    /**
+     * Configures a custom request generator for the agent.
+     *
+     * @param Input The type of the input data.
+     * @param generateRequest Function to generate the request string from the input.
+     * @return Builder for Claude CLI agent with custom input type.
+     */
     public fun <Input> generateRequest(
         generateRequest: CliConfig.GenerateRequest<Input>
     ): ClaudeAgentGenericInputBuilder<Input> = ClaudeAgentGenericInputBuilder(
@@ -72,6 +93,11 @@ public abstract class ClaudeAgentBuilderCommon<Self : ClaudeAgentBuilderCommon<S
         generateRequest = generateRequest
     )
 
+    /**
+     * Builds the Claude CLI agent.
+     *
+     * @return A configured [CliAIAgent] instance that accepts String input and produces [CliAIAgentResponse].
+     */
     public fun build(): CliAIAgent<String, CliAIAgentResponse> {
         val finalTransport = requireNotNull(this.transport) { "Transport is required" }
         return CliAIAgent.claude(
@@ -109,6 +135,13 @@ public abstract class ClaudeAgentGenericInputBuilderCommon<Input, Self : ClaudeA
 ) : ClaudeAgentBuilderBase<Input, CliAIAgentResponse, Self>(
     transport, systemPrompt, llModel, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
 ) {
+    /**
+     * Configures the agent to produce structured output using the specified output class.
+     *
+     * @param Output The type of the structured output.
+     * @param outputClass The Kotlin class representing the output structure.
+     * @return Builder for Claude CLI agent with custom input type and structured output.
+     */
     @OptIn(InternalSerializationApi::class)
     public fun <Output : Any> structure(
         outputClass: KClass<Output>
@@ -116,6 +149,13 @@ public abstract class ClaudeAgentGenericInputBuilderCommon<Input, Self : ClaudeA
         return structure(JsonStructure.create(serializer = outputClass.serializer()))
     }
 
+    /**
+     * Configures the agent to produce structured output using the specified structure definition.
+     *
+     * @param Output The type of the structured output.
+     * @param structure The structure definition for parsing the output.
+     * @return Builder for Claude CLI agent with custom input type and structured output.
+     */
     public fun <Output> structure(
         structure: Structure<Output, LLMParams.Schema.JSON>
     ): ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output> = ClaudeAgentGenericInputStructuredOutputBuilder(
@@ -134,6 +174,11 @@ public abstract class ClaudeAgentGenericInputBuilderCommon<Input, Self : ClaudeA
         structure = structure
     )
 
+    /**
+     * Builds the Claude CLI agent with custom input type.
+     *
+     * @return A configured [CliAIAgent] instance that accepts custom input and produces [CliAIAgentResponse].
+     */
     public fun build(): CliAIAgent<Input, CliAIAgentResponse> {
         return CliAIAgent.claude<Input>(
             transport = transport,

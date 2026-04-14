@@ -15,7 +15,9 @@ public class DockerVolume @JvmOverloads constructor(
     public val readOnly: Boolean = false,
 ) {
     /**
-     * A volume mapping for Docker.
+     * Converts the volume mapping to a Docker mount argument string.
+     *
+     * @return A string in the format "type=bind,source=<hostPath>,target=<containerPath>[,readonly]".
      */
     public fun toMountArg(): String = buildString {
         append("type=bind,source=")

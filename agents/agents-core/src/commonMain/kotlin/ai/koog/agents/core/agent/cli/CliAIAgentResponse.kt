@@ -20,8 +20,9 @@ public data class CliAgentResponseMetaInfo(
 /**
  * Represents the response from a CLI agent.
  *
- * @param content The full content (e.g., stdout) of the agent execution.
- * @param metaInfo Usage information about the agent execution.
+ * @property content The full content (e.g., stdout) of the agent execution.
+ * @property isError Whether the agent execution resulted in an error.
+ * @property metaInfo Usage information about the agent execution.
  */
 @Serializable
 public data class CliAIAgentResponse(

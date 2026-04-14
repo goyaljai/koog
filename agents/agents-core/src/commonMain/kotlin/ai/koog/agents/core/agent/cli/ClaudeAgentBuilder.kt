@@ -69,6 +69,13 @@ public class ClaudeAgentStructuredOutputBuilder<Output> internal constructor(
 ) {
     override fun self(): ClaudeAgentStructuredOutputBuilder<Output> = this
 
+    /**
+     * Configures a custom request generator for the agent.
+     *
+     * @param Input The type of the input data.
+     * @param generateRequest Function to generate the request string from the input.
+     * @return Builder for Claude CLI agent with custom input type and structured output.
+     */
     public fun <Input> generateRequest(
         generateRequest: CliConfig.GenerateRequest<Input>
     ): ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output> = ClaudeAgentGenericInputStructuredOutputBuilder(
@@ -87,6 +94,11 @@ public class ClaudeAgentStructuredOutputBuilder<Output> internal constructor(
         structure = structure
     )
 
+    /**
+     * Builds the Claude CLI agent with structured output.
+     *
+     * @return A configured [CliAIAgent] instance that accepts String input and produces structured output.
+     */
     public fun build(): CliAIAgent<String, CliAgentStructuredResponse<Output>> {
         return CliAIAgent.claude(
             transport = transport,
@@ -128,6 +140,11 @@ public class ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output> inter
 ) {
     override fun self(): ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output> = this
 
+    /**
+     * Builds the Claude CLI agent with custom input type and structured output.
+     *
+     * @return A configured [CliAIAgent] instance that accepts custom input and produces structured output.
+     */
     public fun build(): CliAIAgent<Input, CliAgentStructuredResponse<Output>> {
         return CliAIAgent.claude(
             transport = transport,

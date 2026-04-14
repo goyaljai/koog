@@ -12,6 +12,9 @@ public object CliAvailable : CliAvailability
 
 /**
  * Indicates that the tool is unavailable.
+ *
+ * @property reason A description of why the tool is unavailable.
+ * @property cause The underlying exception that caused the unavailability, if any.
  */
 public class CliUnavailable(
     public val reason: String? = null,

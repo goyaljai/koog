@@ -14,6 +14,8 @@ public class CliNotFoundException(message: String, cause: Throwable? = null) : C
 
 /**
  * Exception indicating that a CLI agent run timed out.
+ *
+ * @property timeout The duration after which the execution timed out.
  */
 public class CliTimeoutException(message: String, public val timeout: Duration, cause: Throwable? = null) :
     CliException(message, cause)
