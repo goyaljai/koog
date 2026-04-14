@@ -1,7 +1,6 @@
 package ai.koog.agents.core.agent.cli
 
 import ai.koog.agents.core.agent.CliAIAgent
-import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.cli.transport.CliTransport
 import ai.koog.prompt.llm.LLModel
 import kotlinx.serialization.InternalSerializationApi

@@ -1,10 +1,7 @@
 package ai.koog.agents.core.agent.cli
 
 import ai.koog.agents.core.agent.CliAIAgent
-import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.cli.transport.CliTransport
-import ai.koog.prompt.dsl.Prompt
-import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.llm.LLModel
 import kotlin.time.Clock
 import kotlin.time.Duration
