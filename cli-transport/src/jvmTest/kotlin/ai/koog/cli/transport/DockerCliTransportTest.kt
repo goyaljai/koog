@@ -8,9 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.File
 import java.nio.file.Files
-import kotlin.test.DefaultAsserter.assertNotNull
 import kotlin.test.Test
-import kotlin.test.assertContains
 import kotlin.test.assertIs
 
 @ExtendWith(DockerAvailableCondition::class)
