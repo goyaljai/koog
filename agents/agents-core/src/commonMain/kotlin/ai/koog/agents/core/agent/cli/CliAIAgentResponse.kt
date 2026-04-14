@@ -6,30 +6,28 @@ import kotlinx.serialization.json.JsonObject
 /**
  * Represents the usage information from a CLI agent.
  *
- * @param inputTokens The number of tokens used in the input.
- * @param outputTokens The number of tokens generated in the output.
- * @param additionalInfo Additional information about the agent token usage.
+ * @param inputTokensCount The number of tokens used in the input.
+ * @param outputTokensCount The number of tokens generated in the output.
+ * @param metadata Free-form information associated with a response from a cli agent.
  */
 @Serializable
-public data class CliAgentUsage(
-    val inputTokens: Int? = null,
-    val outputTokens: Int? = null,
-    val additionalInfo: JsonObject? = null
+public data class CliAgentResponseMetaInfo(
+    val inputTokensCount: Int? = null,
+    val outputTokensCount: Int? = null,
+    val metadata: JsonObject? = null
 )
 
 /**
  * Represents the response from a CLI agent.
  *
  * @param content The full content (e.g., stdout) of the agent execution.
- * @param usage Usage information about the agent execution.
- * @param metadata Additional meta information about the agent execution.
+ * @param metaInfo Usage information about the agent execution.
  */
 @Serializable
 public data class CliAIAgentResponse(
     val content: String,
     val isError: Boolean,
-    val usage: CliAgentUsage = CliAgentUsage(),
-    val metadata: JsonObject? = null
+    val metaInfo: CliAgentResponseMetaInfo,
 )
 
 /**

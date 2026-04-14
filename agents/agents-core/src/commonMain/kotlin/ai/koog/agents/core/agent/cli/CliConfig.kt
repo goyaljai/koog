@@ -13,7 +13,7 @@ public interface CliConfig<Input, Output> {
     /** CLI transport for executing commands. */
     public val transport: CliTransport
 
-    /** Binary of the CLI tool. */
+    /** Path to the binary of the CLI tool. */
     public val binaryPath: String
 
     /** Working directory for command execution. */
@@ -42,5 +42,15 @@ public interface CliConfig<Input, Output> {
          * Generates a request string from context and input.
          */
         public fun generateRequest(input: Input): String
+    }
+
+    /**
+     * Represents a function that extracts the output from CLI event lines.
+     */
+    public fun interface ExtractOutput<Output> {
+        /**
+         * Extracts the output from CLI event lines.
+         */
+        public fun extractOutput(events: List<CliEvent>): Output
     }
 }

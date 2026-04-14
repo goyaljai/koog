@@ -2,17 +2,14 @@ package ai.koog.agents.core.agent.cli
 
 import ai.koog.agents.core.agent.CliAIAgent.Companion.DummyModel
 import ai.koog.agents.core.agent.config.AIAgentConfig
+import ai.koog.cli.transport.CliTransport
 import ai.koog.prompt.dsl.Prompt
 
 /**
  * Builder for CLI AI agents.
  */
-public class CliAgentBuilder internal constructor() : CliAIAgentBuilderBase<CliAgentBuilder>(
-    AIAgentConfig(
-        prompt = Prompt.Empty,
-        model = DummyModel,
-        maxAgentIterations = 10,
-    )
+public class CliAgentBuilder internal constructor(transport: CliTransport) : CliAIAgentBuilderBase<CliAgentBuilder>(
+    transport
 ) {
     override fun self(): CliAgentBuilder = this
 
@@ -20,8 +17,9 @@ public class CliAgentBuilder internal constructor() : CliAIAgentBuilderBase<CliA
      * Configures the agent to use Claude CLI.
      */
     public fun claude(): ClaudeAgentBuilder = ClaudeAgentBuilder(
-        config = config,
         transport = transport,
+        systemPrompt = systemPrompt,
+        llModel = llModel,
         workspace = workspace,
         timeout = timeout,
         id = id,
@@ -33,8 +31,9 @@ public class CliAgentBuilder internal constructor() : CliAIAgentBuilderBase<CliA
      * Configures the agent to use Codex CLI.
      */
     public fun codex(): CodexAgentBuilder = CodexAgentBuilder(
-        config = config,
         transport = transport,
+        systemPrompt = systemPrompt,
+        llModel = llModel,
         workspace = workspace,
         timeout = timeout,
         id = id,
@@ -46,8 +45,9 @@ public class CliAgentBuilder internal constructor() : CliAIAgentBuilderBase<CliA
      * Configures the agent with a custom CLI configuration.
      */
     public fun <Input, Output> custom(): CustomCliAgentBuilder<Input, Output> = CustomCliAgentBuilder(
-        config = config,
         transport = transport,
+        systemPrompt = systemPrompt,
+        llModel = llModel,
         workspace = workspace,
         timeout = timeout,
         id = id,

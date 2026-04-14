@@ -195,10 +195,24 @@ public class CliAIAgent<Input, Output> internal constructor(
 
     //endregion Private Methods
 
-    /***/
+    /**
+     * Companion object containing factory methods for creating instances of [CliAIAgent].
+     */
     public companion object {
         /**
          * Creates a new instance of [CliAIAgent] using Claude.
+         *
+         * @param transport The transport used to execute cli commands.
+         * @param apiKey The API key for the Claude code.
+         * @param systemPrompt The system prompt for the agent.
+         * @param llModel The LLM model to be used for the agent.
+         * @param permissionMode The [ClaudePermissionMode] mode for the agent.
+         * @param additionalFlags Additional flags to be passed to the claude cli.
+         * @param workspace The workspace directory for the agent.
+         * @param timeout The timeout duration for the agent.
+         * @param id The unique identifier for the agent.
+         * @param clock The clock used to calculate message timestamps.
+         * @param installFeatures Lambda for installing additional features.
          */
         @JvmStatic
         @JvmOverloads
@@ -231,6 +245,19 @@ public class CliAIAgent<Input, Output> internal constructor(
 
         /**
          * Creates a new instance of [CliAIAgent] using Claude.
+         *
+         * @param transport The transport used to execute cli commands.
+         * @param apiKey The API key for the Claude code.
+         * @param systemPrompt The system prompt for the agent.
+         * @param llModel The LLM model to be used for the agent.
+         * @param permissionMode The [ClaudePermissionMode] mode for the agent.
+         * @param additionalFlags Additional flags to be passed to the claude cli.
+         * @param workspace The workspace directory for the agent.
+         * @param timeout The timeout duration for the agent.
+         * @param id The unique identifier for the agent.
+         * @param clock The clock used to calculate message timestamps.
+         * @param generateRequest Lambda for generating the request for the agent.
+         * @param installFeatures Lambda for installing additional features.
          */
         @JvmStatic
         @JvmOverloads
@@ -272,6 +299,20 @@ public class CliAIAgent<Input, Output> internal constructor(
 
         /**
          * Creates a new instance of [CliAIAgent] in structured output mode.
+         *
+         * @param transport The transport used to execute cli commands.
+         * @param apiKey The API key for the Claude code.
+         * @param structure [Structure] defining the structured output format.
+         * @param systemPrompt The system prompt for the agent.
+         * @param llModel The LLM model to be used for the agent.
+         * @param permissionMode The [ClaudePermissionMode] mode for the agent.
+         * @param additionalFlags Additional flags to be passed to the claude cli.
+         * @param workspace The workspace directory for the agent.
+         * @param timeout The timeout duration for the agent.
+         * @param id The unique identifier for the agent.
+         * @param clock The clock used to calculate message timestamps.
+         * @param generateRequest Lambda for generating the request for the agent.
+         * @param installFeatures Lambda for installing additional features.
          */
         @JvmStatic
         @JvmOverloads
@@ -315,6 +356,20 @@ public class CliAIAgent<Input, Output> internal constructor(
 
         /**
          * Creates a new instance of [CliAIAgent] in structured output mode.
+         *
+         * @param transport The transport used to execute cli commands.
+         * @param apiKey The API key for the Claude code.
+         * @param Output The type of the structured output.
+         * @param systemPrompt The system prompt for the agent.
+         * @param llModel The LLM model to be used for the agent.
+         * @param permissionMode The [ClaudePermissionMode] mode for the agent.
+         * @param additionalFlags Additional flags to be passed to the claude cli.
+         * @param workspace The workspace directory for the agent.
+         * @param timeout The timeout duration for the agent.
+         * @param id The unique identifier for the agent.
+         * @param clock The clock used to calculate message timestamps.
+         * @param generateRequest Lambda for generating the request for the agent.
+         * @param installFeatures Lambda for installing additional features.
          */
         @JvmName("claudeStructured")
         public inline fun <Input, reified Output> claude(
@@ -348,6 +403,20 @@ public class CliAIAgent<Input, Output> internal constructor(
 
         /**
          * Creates a new instance of [CliAIAgent] in structured output mode.
+         *
+         * @param transport The transport used to execute cli commands.
+         * @param apiKey The API key for the Claude code.
+         * @param Output The type of the structured output.
+         * @param systemPrompt The system prompt for the agent.
+         * @param llModel The LLM model to be used for the agent.
+         * @param permissionMode The [ClaudePermissionMode] mode for the agent.
+         * @param additionalFlags Additional flags to be passed to the claude cli.
+         * @param workspace The workspace directory for the agent.
+         * @param timeout The timeout duration for the agent.
+         * @param id The unique identifier for the agent.
+         * @param clock The clock used to calculate message timestamps.
+         * @param generateRequest Lambda for generating the request for the agent.
+         * @param installFeatures Lambda for installing additional features.
          */
         @JvmStatic
         @JvmOverloads
@@ -389,6 +458,19 @@ public class CliAIAgent<Input, Output> internal constructor(
 
         /**
          * Creates a new instance of [CliAIAgent] using Codex.
+         *
+         * @param transport The transport used to execute cli commands.
+         * @param apiKey The API key for the Codex code.
+         * @param systemPrompt The system prompt for the agent.
+         * @param llModel The LLM model to be used for the agent.
+         * @param sandbox The [CodexSandboxMode] for the agent.
+         * @param askForApproval The [CodexApprovalPolicy] for the agent.
+         * @param additionalFlags Additional flags to be passed to the codex cli.
+         * @param workspace The workspace directory for the agent.
+         * @param timeout The timeout duration for the agent.
+         * @param id The unique identifier for the agent.
+         * @param clock The clock used to calculate message timestamps.
+         * @param installFeatures Lambda for installing additional features.
          */
         @JvmStatic
         @JvmOverloads
@@ -423,6 +505,20 @@ public class CliAIAgent<Input, Output> internal constructor(
 
         /**
          * Creates a new instance of [CliAIAgent] using Codex.
+         *
+         * @param transport The transport used to execute cli commands.
+         * @param apiKey The API key for the Codex code.
+         * @param systemPrompt The system prompt for the agent.
+         * @param llModel The LLM model to be used for the agent.
+         * @param sandbox The [CodexSandboxMode] for the agent.
+         * @param askForApproval The [CodexApprovalPolicy] for the agent.
+         * @param additionalFlags Additional flags to be passed to the codex cli.
+         * @param workspace The workspace directory for the agent.
+         * @param timeout The timeout duration for the agent.
+         * @param id The unique identifier for the agent.
+         * @param clock The clock used to calculate message timestamps.
+         * @param generateRequest Lambda for generating the request for the agent.
+         * @param installFeatures Lambda for installing additional features.
          */
         @JvmStatic
         @JvmOverloads
@@ -465,10 +561,36 @@ public class CliAIAgent<Input, Output> internal constructor(
         }
 
         /**
+         * Creates a new instance of [CliAIAgent] using custom configuration of the cli.
+         *
+         * @param cliConfig The configuration for the cli.
+         * @param systemPrompt The system prompt for the agent.
+         * @param llModel The LLM model to be used for the agent.
+         * @param id The unique identifier for the agent.
+         * @param clock The clock used to calculate message timestamps.
+         * @param installFeatures Lambda for installing additional features.
+         */
+        public fun <Input, Output> custom(
+            cliConfig: CliConfig<Input, Output>,
+            systemPrompt: String? = null,
+            llModel: LLModel? = null,
+            id: String? = null,
+            clock: Clock = Clock.System,
+            installFeatures: FeatureContext.() -> Unit = {}
+        ): CliAIAgent<Input, Output> = CliAIAgent(
+            systemPrompt = systemPrompt,
+            llModel = llModel,
+            strategy = AIAgentCliStrategy(config = cliConfig),
+            id = id,
+            clock = clock,
+            installFeatures = installFeatures
+        )
+
+        /**
          * Creates a new [CliAgentBuilder].
          */
         @JvmStatic
-        public fun builder(): CliAgentBuilder = CliAgentBuilder()
+        public fun builder(transport: CliTransport): CliAgentBuilder = CliAgentBuilder(transport)
 
         private val logger = KotlinLogging.logger {}
 

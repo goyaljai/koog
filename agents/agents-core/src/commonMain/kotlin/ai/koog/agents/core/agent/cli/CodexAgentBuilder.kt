@@ -3,6 +3,7 @@ package ai.koog.agents.core.agent.cli
 import ai.koog.agents.core.agent.CliAIAgent
 import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.cli.transport.CliTransport
+import ai.koog.prompt.llm.LLModel
 import kotlin.time.Clock
 import kotlin.time.Duration
 
@@ -10,8 +11,9 @@ import kotlin.time.Duration
  * Default builder for Codex CLI agent.
  */
 public class CodexAgentBuilder internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
@@ -22,7 +24,7 @@ public class CodexAgentBuilder internal constructor(
     askForApproval: CodexApprovalPolicy? = null,
     additionalFlags: List<String> = emptyList(),
 ) : CodexAgentBuilderBase<String, CodexAgentBuilder>(
-    config, transport, workspace, timeout, id, clock, featureInstallers, apiKey, sandbox, askForApproval, additionalFlags
+    transport, systemPrompt, llModel, workspace, timeout, id, clock, featureInstallers, apiKey, sandbox, askForApproval, additionalFlags
 ) {
     override fun self(): CodexAgentBuilder = this
 
@@ -32,8 +34,9 @@ public class CodexAgentBuilder internal constructor(
     public fun <Input> generateRequest(
         generateRequest: CliConfig.GenerateRequest<Input>
     ): CodexAgentGenericInputBuilder<Input> = CodexAgentGenericInputBuilder(
-        config = config,
         transport = transport,
+        systemPrompt = systemPrompt,
+        llModel = llModel,
         workspace = workspace,
         timeout = timeout,
         id = id,
@@ -69,8 +72,9 @@ public class CodexAgentBuilder internal constructor(
  * Generic builder for Codex CLI agent with custom input type.
  */
 public class CodexAgentGenericInputBuilder<Input> internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
@@ -82,7 +86,7 @@ public class CodexAgentGenericInputBuilder<Input> internal constructor(
     additionalFlags: List<String>,
     internal val generateRequest: CliConfig.GenerateRequest<Input>,
 ) : CodexAgentBuilderBase<Input, CodexAgentGenericInputBuilder<Input>>(
-    config, transport, workspace, timeout, id, clock, featureInstallers, apiKey, sandbox, askForApproval, additionalFlags
+    transport, systemPrompt, llModel, workspace, timeout, id, clock, featureInstallers, apiKey, sandbox, askForApproval, additionalFlags
 ) {
     override fun self(): CodexAgentGenericInputBuilder<Input> = this
 

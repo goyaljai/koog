@@ -12,11 +12,19 @@ import kotlin.time.Duration
 public actual interface CliTransport {
     /**
      * Checks if the cli is available at the specified path.
+     *
+     * @param binaryPath The path to the cli binary.
+     * @param workspace The workspace directory where the cli will be executed.
      */
     public actual fun checkAvailability(binaryPath: String, workspace: String): CliAvailability
 
     /**
      * Executes the cli command and returns a Flow of AgentEvents.
+     *
+     * @param command The command to execute.
+     * @param workspace The workspace directory where the cli will be executed.
+     * @param env The environment variables to set for the cli process.
+     * @param timeout The maximum duration to wait for the cli process to complete.
      */
     public actual fun execute(
         command: List<String>,
@@ -42,6 +50,9 @@ public actual interface CliTransport {
         }
     }
 
+    /**
+     * Companion object defining factory methods for CliTransport implementations.
+     */
     public companion object {
         /**
          * Default implementation of ProcessTransport using a ProcessBuilder to spawn a new process in available shell.

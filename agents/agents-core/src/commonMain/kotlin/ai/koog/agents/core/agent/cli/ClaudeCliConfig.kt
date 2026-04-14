@@ -18,6 +18,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
+import kotlin.time.Clock
 import kotlin.time.Duration
 
 /**
@@ -123,7 +124,8 @@ public object ClaudeCliHelper {
         if (failedEvent != null) {
             return CliAIAgentResponse(
                 content = "Cli failed: ${failedEvent.message}",
-                isError = true
+                isError = true,
+                metaInfo = CliAgentResponseMetaInfo()
             )
         }
 
@@ -141,9 +143,9 @@ public object ClaudeCliHelper {
 
         val usageObject = resultEvent["usage"]?.jsonObject
 
-        val usage = CliAgentUsage(
-            inputTokens = usageObject?.get("input_tokens")?.intVal,
-            outputTokens = usageObject?.get("output_tokens")?.intVal,
+        val metaInfo = CliAgentResponseMetaInfo(
+            inputTokensCount = usageObject?.get("input_tokens")?.intVal,
+            outputTokensCount = usageObject?.get("output_tokens")?.intVal,
             buildJsonObject {
                 put("cacheCreationInputTokens", usageObject?.get("cache_creation_input_tokens")?.intVal)
                 put("cacheReadInputTokens", usageObject?.get("cache_read_input_tokens")?.intVal)
@@ -154,7 +156,7 @@ public object ClaudeCliHelper {
         return CliAIAgentResponse(
             content = content,
             isError = isError,
-            usage = usage
+            metaInfo = metaInfo
         )
     }
 
@@ -163,7 +165,7 @@ public object ClaudeCliHelper {
      */
     public fun <T> extractStructuredOutput(
         events: List<CliEvent>,
-        structure: Structure<T, *>
+        structure: Structure<T, *>,
     ): CliAgentStructuredResponse<T> {
         val failedEvent = events.filterIsInstance<CliEvent.Failed>().firstOrNull()
         if (failedEvent != null) {
@@ -171,7 +173,8 @@ public object ClaudeCliHelper {
                 result = null,
                 response = CliAIAgentResponse(
                     content = "Cli failed: ${failedEvent.message}",
-                    isError = true
+                    isError = true,
+                    metaInfo = CliAgentResponseMetaInfo()
                 )
             )
         }

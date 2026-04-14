@@ -3,6 +3,7 @@ package ai.koog.agents.core.agent.cli
 import ai.koog.agents.core.agent.CliAIAgent
 import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.cli.transport.CliTransport
+import ai.koog.prompt.llm.LLModel
 import kotlin.time.Clock
 import kotlin.time.Duration
 
@@ -10,8 +11,9 @@ import kotlin.time.Duration
  * Base class for Codex agent builders.
  */
 public abstract class CodexAgentBuilderBase<Input, Self : CodexAgentBuilderBase<Input, Self>> internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
@@ -22,8 +24,9 @@ public abstract class CodexAgentBuilderBase<Input, Self : CodexAgentBuilderBase<
     protected var askForApproval: CodexApprovalPolicy? = null,
     protected var additionalFlags: List<String> = emptyList(),
 ) : CliAIAgentBuilderBase<Self>(
-    config,
     transport,
+    systemPrompt,
+    llModel,
     workspace,
     timeout,
     id,

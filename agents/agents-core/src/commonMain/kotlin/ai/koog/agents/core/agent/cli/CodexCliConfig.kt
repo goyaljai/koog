@@ -113,6 +113,7 @@ public class CodexCliConfig<Input>(
             return CliAIAgentResponse(
                 content = "Cli failed: ${failedEvent.message}",
                 isError = true,
+                metaInfo = CliAgentResponseMetaInfo()
             )
         }
 
@@ -124,6 +125,7 @@ public class CodexCliConfig<Input>(
         val content = if (resultIsError) {
             errorEvent["error"]?.jsonObject?.get("message")?.stringVal
         } else {
+            // we're interested in the last event of type {"type": "item.completed", "item": {"id": "item_123", "text": "some text"}}"...}
             jsonEvents
                 .filter { it["type"]?.stringVal == "item.completed" }
                 .mapNotNull { it["item"] as? JsonObject }
@@ -136,10 +138,10 @@ public class CodexCliConfig<Input>(
             ?.get("usage")
             ?.jsonObject
 
-        val usage = CliAgentUsage(
-            inputTokens = usageObject?.get("input_tokens")?.intVal,
-            outputTokens = usageObject?.get("output_tokens")?.intVal,
-            additionalInfo = buildJsonObject {
+        val metaInfo = CliAgentResponseMetaInfo(
+            inputTokensCount = usageObject?.get("input_tokens")?.intVal,
+            outputTokensCount = usageObject?.get("output_tokens")?.intVal,
+            metadata = buildJsonObject {
                 put("cachedInputTokens", usageObject?.get("cached_input_tokens")?.intVal)
             }
         )
@@ -147,7 +149,7 @@ public class CodexCliConfig<Input>(
         return CliAIAgentResponse(
             content = content ?: "Failed to extract message content",
             isError = resultIsError || content == null,
-            usage = usage,
+            metaInfo = metaInfo,
         )
     }
 }

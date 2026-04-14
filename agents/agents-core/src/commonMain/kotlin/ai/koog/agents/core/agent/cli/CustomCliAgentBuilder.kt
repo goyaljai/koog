@@ -1,7 +1,6 @@
 package ai.koog.agents.core.agent.cli
 
 import ai.koog.agents.core.agent.CliAIAgent
-import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.cli.transport.CliEvent
 import ai.koog.cli.transport.CliTransport
 import ai.koog.prompt.llm.LLModel
@@ -13,16 +12,18 @@ import kotlin.time.Duration
  * Builder for custom CLI agent.
  */
 public class CustomCliAgentBuilder<Input, Output> internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
     clock: Clock,
     featureInstallers: MutableList<CliAIAgent.FeatureContext.() -> Unit>
 ) : CliAIAgentBuilderBase<CustomCliAgentBuilder<Input, Output>>(
-    config,
     transport,
+    systemPrompt,
+    llModel,
     workspace,
     timeout,
     id,
@@ -32,7 +33,7 @@ public class CustomCliAgentBuilder<Input, Output> internal constructor(
     private var binaryPath: String = ""
     private var flags: (LLModel, List<Message.System>) -> List<String> = { _, _ -> emptyList() }
     private var generateRequest: CliConfig.GenerateRequest<Input>? = null
-    private var extractOutput: ((List<CliEvent>) -> Output)? = null
+    private var extractOutput: CliConfig.ExtractOutput<Output>? = null
     private var env: Map<String, String> = emptyMap()
 
     override fun self(): CustomCliAgentBuilder<Input, Output> = this
@@ -61,7 +62,7 @@ public class CustomCliAgentBuilder<Input, Output> internal constructor(
     /**
      * Sets the function that extracts the output from CLI event lines.
      */
-    public fun extractOutput(extractOutput: (List<CliEvent>) -> Output): CustomCliAgentBuilder<Input, Output> = self().apply {
+    public fun extractOutput(extractOutput: CliConfig.ExtractOutput<Output>): CustomCliAgentBuilder<Input, Output> = self().apply {
         this.extractOutput = extractOutput
     }
 
@@ -79,7 +80,7 @@ public class CustomCliAgentBuilder<Input, Output> internal constructor(
         val finalTransport = requireNotNull(this.transport) { "Transport is required" }
         require(binaryPath.isNotEmpty()) { "Binary path is required" }
         val generateRequest = requireNotNull(this.generateRequest) { "Generate request is required" }
-        val extractOutputNotNull = requireNotNull(this.extractOutput) { "Extract output is required" }
+        val extractOutput = requireNotNull(this.extractOutput) { "Extract output is required" }
 
         val customConfig = object : CliConfig<Input, Output> {
             override val transport: CliTransport = finalTransport
@@ -95,12 +96,13 @@ public class CustomCliAgentBuilder<Input, Output> internal constructor(
                 generateRequest.generateRequest(input)
 
             override fun extractOutput(events: List<CliEvent>): Output =
-                extractOutputNotNull(events) ?: throw IllegalStateException("Failed to extract output")
+                extractOutput.extractOutput(events)
         }
 
-        return CliAIAgent(
-            agentConfig = config,
-            strategy = AIAgentCliStrategy(customConfig),
+        return CliAIAgent.custom(
+            cliConfig = customConfig,
+            systemPrompt = systemPrompt,
+            llModel = llModel,
             id = id,
             clock = clock,
             installFeatures = {

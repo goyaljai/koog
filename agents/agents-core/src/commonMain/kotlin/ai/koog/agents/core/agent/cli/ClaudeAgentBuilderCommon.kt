@@ -3,6 +3,7 @@ package ai.koog.agents.core.agent.cli
 import ai.koog.agents.core.agent.CliAIAgent
 import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.cli.transport.CliTransport
+import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.params.LLMParams
 import ai.koog.prompt.structure.Structure
 import ai.koog.prompt.structure.json.JsonStructure
@@ -16,8 +17,9 @@ import kotlin.time.Duration
  * Common logic for ClaudeAgentBuilder.
  */
 public abstract class ClaudeAgentBuilderCommon<Self : ClaudeAgentBuilderCommon<Self>> internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
@@ -27,7 +29,7 @@ public abstract class ClaudeAgentBuilderCommon<Self : ClaudeAgentBuilderCommon<S
     permissionMode: ClaudePermissionMode? = null,
     additionalFlags: List<String> = emptyList(),
 ) : ClaudeAgentBuilderBase<String, CliAIAgentResponse, Self>(
-    config, transport, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
+    transport, systemPrompt, llModel, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
 ) {
     @OptIn(InternalSerializationApi::class)
     public fun <Output : Any> structure(
@@ -39,8 +41,9 @@ public abstract class ClaudeAgentBuilderCommon<Self : ClaudeAgentBuilderCommon<S
     public fun <Output> structure(
         structure: Structure<Output, LLMParams.Schema.JSON>
     ): ClaudeAgentStructuredOutputBuilder<Output> = ClaudeAgentStructuredOutputBuilder(
-        config = config,
         transport = transport,
+        systemPrompt = systemPrompt,
+        llModel = llModel,
         workspace = workspace,
         timeout = timeout,
         id = id,
@@ -55,8 +58,9 @@ public abstract class ClaudeAgentBuilderCommon<Self : ClaudeAgentBuilderCommon<S
     public fun <Input> generateRequest(
         generateRequest: CliConfig.GenerateRequest<Input>
     ): ClaudeAgentGenericInputBuilder<Input> = ClaudeAgentGenericInputBuilder(
-        config = config,
         transport = transport,
+        systemPrompt = systemPrompt,
+        llModel = llModel,
         workspace = workspace,
         timeout = timeout,
         id = id,
@@ -90,8 +94,9 @@ public abstract class ClaudeAgentBuilderCommon<Self : ClaudeAgentBuilderCommon<S
  * Common logic for ClaudeAgentGenericInputBuilder.
  */
 public abstract class ClaudeAgentGenericInputBuilderCommon<Input, Self : ClaudeAgentGenericInputBuilderCommon<Input, Self>> internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
@@ -102,7 +107,7 @@ public abstract class ClaudeAgentGenericInputBuilderCommon<Input, Self : ClaudeA
     additionalFlags: List<String>,
     internal val generateRequest: CliConfig.GenerateRequest<Input>,
 ) : ClaudeAgentBuilderBase<Input, CliAIAgentResponse, Self>(
-    config, transport, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
+    transport, systemPrompt, llModel, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
 ) {
     @OptIn(InternalSerializationApi::class)
     public fun <Output : Any> structure(
@@ -114,8 +119,9 @@ public abstract class ClaudeAgentGenericInputBuilderCommon<Input, Self : ClaudeA
     public fun <Output> structure(
         structure: Structure<Output, LLMParams.Schema.JSON>
     ): ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output> = ClaudeAgentGenericInputStructuredOutputBuilder(
-        config = config,
         transport = transport,
+        systemPrompt = systemPrompt,
+        llModel = llModel,
         workspace = workspace,
         timeout = timeout,
         id = id,
@@ -129,12 +135,11 @@ public abstract class ClaudeAgentGenericInputBuilderCommon<Input, Self : ClaudeA
     )
 
     public fun build(): CliAIAgent<Input, CliAIAgentResponse> {
-        val finalTransport = requireNotNull(this.transport) { "Transport is required" }
         return CliAIAgent.claude<Input>(
-            transport = finalTransport,
+            transport = transport,
             apiKey = apiKey,
-            systemPrompt = null,
-            llModel = null,
+            systemPrompt = systemPrompt,
+            llModel = llModel,
             permissionMode = permissionMode,
             additionalFlags = additionalFlags,
             workspace = workspace,

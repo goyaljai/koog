@@ -8,25 +8,30 @@ public sealed interface CliEvent {
     /**
      * Regular line of text output from the CLI.
      */
-    public sealed class Line(public val content: String) : CliEvent
+    public sealed interface Line : CliEvent {
+        /**
+         * Content of the line.
+         */
+        public val content: String
+    }
 
     /**
      * Reports a line from stdout
      */
-    public class Stdout(content: String) : Line(content)
+    public data class Stdout(override val content: String) : Line
 
     /**
      * Reports a line from stderr
      */
-    public class Stderr(content: String) : Line(content)
+    public data class Stderr(override val content: String) : Line
 
     /**
      * Reports the exit status of the CLI execution.
      */
-    public class Exit(public val code: Int) : CliEvent
+    public data class Exit(public val code: Int) : CliEvent
 
     /**
      * Reports a failure during cli execution.
      */
-    public class Failed(public val message: String?) : CliEvent
+    public data class Failed(public val message: String?) : CliEvent
 }

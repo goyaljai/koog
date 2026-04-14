@@ -3,6 +3,7 @@ package ai.koog.agents.core.agent.cli
 import ai.koog.agents.core.agent.CliAIAgent
 import ai.koog.agents.core.agent.config.AIAgentConfig
 import ai.koog.cli.transport.CliTransport
+import ai.koog.prompt.llm.LLModel
 import ai.koog.prompt.params.LLMParams
 import ai.koog.prompt.structure.Structure
 import kotlin.time.Clock
@@ -12,8 +13,9 @@ import kotlin.time.Duration
  * Default builder for Claude CLI agent.
  */
 public expect class ClaudeAgentBuilder internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
@@ -30,8 +32,9 @@ public expect class ClaudeAgentBuilder internal constructor(
  * Builder for Claude CLI agent with custom input type.
  */
 public expect class ClaudeAgentGenericInputBuilder<Input> internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
@@ -49,8 +52,9 @@ public expect class ClaudeAgentGenericInputBuilder<Input> internal constructor(
  * Builder for Claude CLI agent with structured output.
  */
 public class ClaudeAgentStructuredOutputBuilder<Output> internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
@@ -61,15 +65,16 @@ public class ClaudeAgentStructuredOutputBuilder<Output> internal constructor(
     additionalFlags: List<String>,
     internal val structure: Structure<Output, LLMParams.Schema.JSON>,
 ) : ClaudeAgentBuilderBase<String, CliAgentStructuredResponse<Output>, ClaudeAgentStructuredOutputBuilder<Output>>(
-    config, transport, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
+    transport, systemPrompt, llModel, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
 ) {
     override fun self(): ClaudeAgentStructuredOutputBuilder<Output> = this
 
     public fun <Input> generateRequest(
         generateRequest: CliConfig.GenerateRequest<Input>
     ): ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output> = ClaudeAgentGenericInputStructuredOutputBuilder(
-        config = config,
         transport = transport,
+        systemPrompt = systemPrompt,
+        llModel = llModel,
         workspace = workspace,
         timeout = timeout,
         id = id,
@@ -83,13 +88,12 @@ public class ClaudeAgentStructuredOutputBuilder<Output> internal constructor(
     )
 
     public fun build(): CliAIAgent<String, CliAgentStructuredResponse<Output>> {
-        val finalTransport = requireNotNull(this.transport) { "Transport is required" }
         return CliAIAgent.claude(
-            transport = finalTransport,
+            transport = transport,
             apiKey = apiKey,
             structure = structure,
-            systemPrompt = null, // systemPrompt is already in AIAgentConfig
-            llModel = null, // llModel is already in AIAgentConfig
+            systemPrompt = systemPrompt,
+            llModel = llModel,
             permissionMode = permissionMode,
             additionalFlags = additionalFlags,
             workspace = workspace,
@@ -106,8 +110,9 @@ public class ClaudeAgentStructuredOutputBuilder<Output> internal constructor(
  * Builder for Claude CLI agent with custom input type and structured output.
  */
 public class ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output> internal constructor(
-    config: AIAgentConfig,
-    transport: CliTransport?,
+    transport: CliTransport,
+    systemPrompt: String?,
+    llModel: LLModel?,
     workspace: String,
     timeout: Duration?,
     id: String?,
@@ -119,18 +124,17 @@ public class ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output> inter
     internal val generateRequest: CliConfig.GenerateRequest<Input>,
     internal val structure: Structure<Output, LLMParams.Schema.JSON>,
 ) : ClaudeAgentBuilderBase<Input, CliAgentStructuredResponse<Output>, ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output>>(
-    config, transport, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
+    transport, systemPrompt, llModel, workspace, timeout, id, clock, featureInstallers, apiKey, permissionMode, additionalFlags
 ) {
     override fun self(): ClaudeAgentGenericInputStructuredOutputBuilder<Input, Output> = this
 
     public fun build(): CliAIAgent<Input, CliAgentStructuredResponse<Output>> {
-        val finalTransport = requireNotNull(this.transport) { "Transport is required" }
         return CliAIAgent.claude(
-            transport = finalTransport,
+            transport = transport,
             apiKey = apiKey,
             structure = structure,
-            systemPrompt = null,
-            llModel = null,
+            systemPrompt = systemPrompt,
+            llModel = llModel,
             permissionMode = permissionMode,
             additionalFlags = additionalFlags,
             workspace = workspace,

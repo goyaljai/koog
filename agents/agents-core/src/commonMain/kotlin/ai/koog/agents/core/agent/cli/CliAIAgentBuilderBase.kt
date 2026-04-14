@@ -14,21 +14,31 @@ import kotlin.time.Duration.Companion.minutes
  * Base class for CLI AI agent builders.
  */
 public abstract class CliAIAgentBuilderBase<Self : CliAIAgentBuilderBase<Self>> internal constructor(
-    protected var config: AIAgentConfig,
-    protected var transport: CliTransport? = null,
-    protected var workspace: String = ".",
-    protected var timeout: Duration? = null,
-    protected var id: String? = null,
-    protected var clock: Clock = Clock.System,
-    protected val featureInstallers: MutableList<CliAIAgent.FeatureContext.() -> Unit> = mutableListOf(),
+    protected val transport: CliTransport,
+    protected var systemPrompt: String?,
+    protected var llModel: LLModel?,
+    protected var workspace: String,
+    protected var timeout: Duration?,
+    protected var id: String?,
+    protected var clock: Clock,
+    protected val featureInstallers: MutableList<CliAIAgent.FeatureContext.() -> Unit>,
 ) {
+    internal constructor(transport: CliTransport) : this(transport, null, null, ".", null, null, Clock.System, mutableListOf())
+
     protected abstract fun self(): Self
 
     /**
-     * Sets the CLI transport.
+     * Adds the system prompt.
      */
-    public fun transport(transport: CliTransport): Self = self().apply {
-        this.transport = transport
+    public fun systemPrompt(systemPrompt: String): Self = self().apply {
+        this.systemPrompt = systemPrompt
+    }
+
+    /**
+     * Sets the LLM model.
+     */
+    public fun llModel(llModel: LLModel): Self = self().apply {
+        this.llModel = llModel
     }
 
     /**
@@ -49,27 +59,6 @@ public abstract class CliAIAgentBuilderBase<Self : CliAIAgentBuilderBase<Self>> 
      * Sets the execution timeout in minutes.
      */
     public fun timeoutMin(timeoutMin: Long): Self = timeout(timeoutMin.minutes)
-
-    /**
-     * Adds the system prompt.
-     */
-    public fun systemPrompt(systemPrompt: String): Self = self().apply {
-        this.config = config.copy(prompt = prompt(config.prompt) { system(systemPrompt) })
-    }
-
-    /**
-     * Sets the prompt.
-     */
-    public fun prompt(prompt: Prompt): Self = self().apply {
-        this.config = config.copy(prompt = prompt)
-    }
-
-    /**
-     * Sets the LLM model.
-     */
-    public fun llModel(llModel: LLModel): Self = self().apply {
-        this.config = config.copy(model = llModel)
-    }
 
     /**
      * Sets the agent ID.

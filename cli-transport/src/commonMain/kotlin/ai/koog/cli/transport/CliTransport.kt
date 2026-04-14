@@ -9,11 +9,19 @@ import kotlin.time.Duration
 public expect interface CliTransport {
     /**
      * Checks if the cli is available at the specified path.
+     *
+     * @param binaryPath The path to the cli binary.
+     * @param workspace The workspace directory where the cli will be executed.
      */
     public fun checkAvailability(binaryPath: String, workspace: String): CliAvailability
 
     /**
      * Executes the cli command and returns a Flow of AgentEvents.
+     *
+     * @param command The command to execute.
+     * @param workspace The workspace directory where the cli will be executed.
+     * @param env The environment variables to set for the cli process.
+     * @param timeout The maximum duration to wait for the cli process to complete.
      */
     public fun execute(
         command: List<String>,

@@ -43,10 +43,10 @@ class CliAIAgentIntegrationTest : AIAgentTestBase() {
             assertFalse(response.isError, "Run should be successful")
             assertContains(response.content, "hi", ignoreCase = true, "Response should contain 'hi'")
 
-            val usage = response.usage
+            val metaInfo = response.metaInfo
 
-            assertNotNull(usage.inputTokens, "Usage should contain input tokens")
-            assertNotNull(usage.outputTokens, "Usage should contain output tokens")
+            assertNotNull(metaInfo.inputTokensCount, "Usage should contain input tokens")
+            assertNotNull(metaInfo.outputTokensCount, "Usage should contain output tokens")
         }
     }
 
