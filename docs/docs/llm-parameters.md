@@ -184,6 +184,7 @@ For a list of default values for each parameter, see the corresponding LLM provi
 - [DeepSeek](https://api-docs.deepseek.com/api/create-chat-completion#request)
 - [OpenRouter](https://openrouter.ai/docs/api/reference/parameters)
 - Alibaba ([DashScope](https://www.alibabacloud.com/help/en/model-studio/qwen-api-reference))
+- [Ollama](https://docs.ollama.com/api/openai-compatibility)
 
 ## Schema
 
@@ -427,6 +428,7 @@ and add provider-specific functionality. The following classes include parameter
 - `DeepSeekParams`: Parameters specific to DeepSeek models.
 - `OpenRouterParams`: Parameters specific to OpenRouter models.
 - `DashscopeParams`: Parameters specific to Alibaba models.
+- `OllamaParams`: Parameters specific to Ollama models.
 
 Here is the complete reference of provider-specific parameters in Koog:
 
@@ -550,6 +552,12 @@ Here is the complete reference of provider-specific parameters in Koog:
     llm-parameters-snippets.md:stop
     llm-parameters-snippets.md:topLogprobs
     llm-parameters-snippets.md:topP
+    --8<--
+
+=== "Ollama"
+
+    --8<--
+    llm-parameters-snippets.md:think
     --8<--
 
 The following example shows defined OpenRouter LLM parameters using the provider-specific `OpenRouterParams` class:
