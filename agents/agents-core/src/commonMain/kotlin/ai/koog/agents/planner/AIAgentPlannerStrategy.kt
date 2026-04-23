@@ -48,18 +48,6 @@ public class AIAgentPlannerStrategy<Input, Output, State : Any>(
      * */
     public companion object {
         /**
-         * Creates an instance of [AIAgentPlannerStrategy] with the specified name and planner.
-         *
-         * @param name The name of the planner strategy to be created.
-         * @param planner The planner instance that defines the specific planning logic.
-         * @return A new [AIAgentPlannerStrategy] instance where the input, output, and state types are the same.
-         */
-        public operator fun <State : Any> invoke(
-            name: String,
-            planner: AIAgentPlanner<State, *>,
-        ): AIAgentPlannerStrategy<State, State, State> = AIAgentPlannerStrategy(name, planner, { it }, { it })
-
-        /**
          * Creates a new instance of AIAgentPlannerStrategyBuilder with the specified name.
          *
          * @param name The name of the AI agent planner strategy.
@@ -86,3 +74,15 @@ public class AIAgentPlannerStrategy<Input, Output, State : Any>(
         }.build()
     }
 }
+
+/**
+ * Creates an instance of [AIAgentPlannerStrategy] with the specified name and planner.
+ *
+ * @param name The name of the planner strategy to be created.
+ * @param planner The planner instance that defines the specific planning logic.
+ * @return A new [AIAgentPlannerStrategy] instance where the input, output, and state types are the same.
+ */
+public fun <State : Any> AIAgentPlannerStrategy(
+    name: String,
+    planner: AIAgentPlanner<State, *>,
+): AIAgentPlannerStrategy<State, State, State> = AIAgentPlannerStrategy(name, planner, { it }, { it })
