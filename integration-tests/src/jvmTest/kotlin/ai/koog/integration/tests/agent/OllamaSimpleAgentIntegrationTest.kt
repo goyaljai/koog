@@ -44,7 +44,7 @@ class OllamaSimpleAgentIntegrationTest : AIAgentTestBase() {
     @Retry
     @Test
     fun ollama_simpleTest() = runTest(timeout = 600.seconds) {
-        val toolRegistry = ToolRegistry.Companion {
+        val toolRegistry = ToolRegistry {
             tool(SayToUser)
         }
 
